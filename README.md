@@ -57,7 +57,7 @@ cd api
 
 ```
 
-The FastAPI server will run on `http://localhost:8000` by default.
+The FastAPI server will run on `http://localhost:5328` by default.
 
 5. Start the Next.js development server:
 

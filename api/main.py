@@ -100,3 +100,7 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
 async def shutdown_event():
     for game_id in list(game_manager.games.keys()):
         game_manager.remove_game(game_id)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=5328)

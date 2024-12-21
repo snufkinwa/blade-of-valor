@@ -78,16 +78,18 @@ export default class Architect {
     ];
 
     animConfigs.forEach(({ key, start, end, frameRate, repeat }) => {
-      this.scene.anims.create({
-        key,
-        frames: this.scene.anims.generateFrameNames("architect", {
-          start,
-          end,
-          prefix: "sprite",
-        }),
-        frameRate,
-        repeat,
-      });
+      if (!this.scene.anims.exists(key)) {
+        this.scene.anims.create({
+          key,
+          frames: this.scene.anims.generateFrameNames("architect", {
+            start,
+            end,
+            prefix: "sprite",
+          }),
+          frameRate,
+          repeat,
+        });
+      }
     });
   }
 
