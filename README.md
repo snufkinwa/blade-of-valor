@@ -12,16 +12,18 @@
 
 Blade of Valor is a 2D action-adventure game built using Phaser 3 for the game engine and Next.js for the front-end framework. The game leverages a FastAPI backend integrated with Stockfish to provide AI-driven gameplay mechanics.
 
-## Versions
+## Stack
 
 This project includes:
 
-- [Phaser 3.80.1](https://github.com/phaserjs/phaser)
-- [Next.js 14.2.3](https://github.com/vercel/next.js)
-- [TypeScript 5](https://github.com/microsoft/TypeScript)
+- [Phaser 3](https://github.com/phaserjs/phaser)
+- [Next.js ](https://github.com/vercel/next.js)
+- [TypeScript](https://github.com/microsoft/TypeScript)
 - [FastAPI](https://fastapi.tiangolo.com/)
 - [Stockfish]()
 - [WebSockets]()
+
+<img src="https://imgur.com/x5iUPNt.png" width="500">
 
 ## Requirements
 
