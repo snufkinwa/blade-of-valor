@@ -6,11 +6,11 @@
 
 <p align="center"><em>Where a struggle between humanity and its creations quietly persists, can you possess free will, or are you part of a greater design?</em></p>
 
-**Blade of Valor** is a 2D game that combines the power of Phaser 3, Next.js, and a Flask backend to deliver a unique gameplay experience. The game explores themes of free will and the consequences of actions through a storyline inspired by Grimes' 'Player of Games' and aspects of Legend(1985). The protagonist, Elara, navigates a world filled with ghouls, using her skills in sword combat.
+**Blade of Valor** is a 2D game that combines the power of Phaser 3, Next.js, and a FastAPI backend to deliver a unique gameplay experience. The game explores themes of free will and the consequences of actions through a storyline inspired by Grimes' 'Player of Games' and aspects of Legend(1985). The protagonist, Elara, navigates a world filled with ghouls, using her skills in sword combat.
 
 ## Introduction
 
-Blade of Valor is a 2D action-adventure game built using Phaser 3 for the game engine and Next.js for the front-end framework. The game leverages a FastAPI backend integrated with TensorFlow and Keras to provide AI-driven gameplay mechanics.
+Blade of Valor is a 2D action-adventure game built using Phaser 3 for the game engine and Next.js for the front-end framework. The game leverages a FastAPI backend integrated with Stockfish to provide AI-driven gameplay mechanics.
 
 ## Versions
 
@@ -71,7 +71,7 @@ The development server runs on `http://localhost:8080` by default.
 
 - `src/` - Contains the Next.js source code.
 - `public/` - Static assets for the game.
-- `api/` - Flask backend code.
+- `api/` - FastAPI backend code.
 - `game/` - Phaser game code.
 
 ## React Bridge
