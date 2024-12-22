@@ -11,3 +11,6 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_prefix = "APP_"
+    def __init__(self, **data):
+        data.pop("PYTHONPATH", None)  # Remove PYTHONPATH if present
+        super().__init__(**data)

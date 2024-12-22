@@ -8,7 +8,7 @@ from api.exceptions.errors import GameLimitExceeded
 
 @pytest.fixture
 def test_client():
-    return TestClient(app)
+    return TestClient(app, base_url="http://localhost:5328")
 
 
 @pytest.fixture(autouse=True)

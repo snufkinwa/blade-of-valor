@@ -1,5 +1,6 @@
+import uuid
 from typing import Dict, Optional
-from api.core.chess_engine import DarkChessEngine
+from core.chess_engine import DarkChessEngine
 
 class GameStateManager:
     def __init__(self, settings):
@@ -7,7 +8,9 @@ class GameStateManager:
         self.games: Dict[str, DarkChessEngine] = {}
     
     def create_game(self, game_id: str) -> None:
+        game_id = str(uuid.uuid4()) 
         self.games[game_id] = DarkChessEngine()
+        return game_id
     
     def get_game(self, game_id: str) -> Optional[DarkChessEngine]:
         return self.games.get(game_id)

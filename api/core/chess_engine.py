@@ -1,8 +1,9 @@
 from random import random, choice
 import chess.engine
-from api.models.enums import DarknessState, GamePhase
-from api.models.entities import DarklingWave, GameState
-from api.core.darkness import DarknessSystem
+from models.enums import DarknessState, GamePhase
+from models.entities import DarklingWave, GameState
+from core.darkness import DarknessSystem
+from typing import List
 
 class DarkChessEngine:
     def __init__(self):
@@ -36,7 +37,7 @@ class DarkChessEngine:
         }
         return state_weights[darkness_state]
 
-    def get_moves(self, darkness_state: DarknessState) -> list[chess.Move]:
+    def get_moves(self, darkness_state: DarknessState) -> List[chess.Move]:
         try:
             move_quality = self.calculate_move_quality(darkness_state)
             legal_moves = list(self.board.legal_moves)

@@ -7,9 +7,9 @@ import os
 from datetime import datetime
 from pydantic import ValidationError
 
-from api.core.game_state import GameStateManager
-from api.config.settings import Settings
-from api.exceptions.errors import GameError, GameLimitExceeded
+from core.game_state import GameStateManager
+from config.settings import Settings
+from exceptions.errors import GameError, GameLimitExceeded
 
 print("Environment Variables Passed to Settings:", os.environ)
 
@@ -53,6 +53,10 @@ async def cleanup_inactive_games():
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(cleanup_inactive_games())
+
+@app.get("/")
+async def root():
+    return {"message": "Welcome to the Chess Game API"}
 
 @app.websocket("/ws/{game_id}")
 async def websocket_endpoint(websocket: WebSocket, game_id: str):
