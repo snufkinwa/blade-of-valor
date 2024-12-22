@@ -23,7 +23,7 @@ This project includes:
 - [Stockfish]()
 - [WebSockets]()
 
-<img src="https://imgur.com/PpfWeCf.png" width="700">
+<img src="https://imgur.com/PpfWeCf.png">
 
 ## Requirements
 
