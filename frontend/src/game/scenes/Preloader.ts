@@ -51,6 +51,14 @@ export class Preloader extends Scene {
     });
 
     this.load.json("dialogue", getAssetUrl("data/dialogue.json"));
+    this.load.image(
+      "elara_portrait",
+      getAssetUrl("portrait/elara_portrait_light.png")
+    );
+    this.load.image(
+      "elara_portrait_dark",
+      getAssetUrl("portrait/elara_portrait_dark.png")
+    );
 
     this.loadAtlasAssets();
   }
@@ -72,6 +80,12 @@ export class Preloader extends Scene {
       "dark",
       getAssetUrl("sprites/dark.png"),
       getAssetUrl("data/dark.json")
+    );
+
+    this.load.atlas(
+      "ui",
+      getAssetUrl("UI/scalable+screen/Variations/Type+2/Screen__4.png"),
+      getAssetUrl("data/dialoguebox.json")
     );
   }
 

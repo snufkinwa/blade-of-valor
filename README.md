@@ -23,7 +23,7 @@ This project includes:
 - [Stockfish]()
 - [WebSockets]()
 
-<img src="https://imgur.com/PpfWeCf.png">
+<img src="https://imgur.com/kNBYeB5.png">
 
 ## Requirements
 

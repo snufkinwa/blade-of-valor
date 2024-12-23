@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from core.game_state import GameStateManager
 from config.settings import Settings
 from exceptions.errors import GameError, GameLimitExceeded
+from models.enums import DarknessState
 
 print("Environment Variables Passed to Settings:", os.environ)
 
@@ -43,12 +44,16 @@ connection_manager = ConnectionManager()
 
 async def cleanup_inactive_games():
     while True:
-        now = datetime.now()
-        for game_id, last_active in connection_manager.last_activity.copy().items():
-            if (now - last_active).seconds > settings.GAME_TIMEOUT:
-                game_manager.remove_game(game_id)
-                connection_manager.disconnect(game_id)
-        await asyncio.sleep(60)
+        try:
+            now = datetime.now()
+            for game_id, last_active in connection_manager.last_activity.copy().items():
+                if (now - last_active).seconds > settings.GAME_TIMEOUT:
+                    game_manager.remove_game(game_id)
+                    connection_manager.disconnect(game_id)
+            await asyncio.sleep(60)
+        except Exception as e:
+            print(f"Error in cleanup task: {e}")
+            await asyncio.sleep(60)
 
 @app.on_event("startup")
 async def startup_event():
@@ -70,12 +75,14 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
             game_manager.create_game(game_id)
         
         game = game_manager.get_game(game_id)
+        if not game:
+            raise GameError("Failed to initialize game")
         
         while True:
-            data = await websocket.receive_json()
-            connection_manager.last_activity[game_id] = datetime.now()
-            
             try:
+                data = await websocket.receive_json()
+                connection_manager.last_activity[game_id] = datetime.now()
+                
                 if data["type"] == "move":             
                     result = game.make_move(data["move"], data.get("use_dark_power", False))
                     wave = game.get_darkling_wave()
@@ -87,18 +94,41 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                         "darkling_wave": wave.dict(),
                         "darkness_stats": stats.dict()
                     })
+                else:
+                    await websocket.send_json({
+                        "status": "error",
+                        "message": "Invalid message type"
+                    })
+                    
             except ValidationError as e:
-                await websocket.send_json({"status": "error", "message": "Invalid request format"})
+                await websocket.send_json({
+                    "status": "error",
+                    "message": "Invalid request format"
+                })
             except GameError as e:
-                await websocket.send_json({"status": "error", "message": str(e)})
+                await websocket.send_json({
+                    "status": "error",
+                    "message": str(e)
+                })
+            except Exception as e:
+                print(f"Error processing message: {e}")
+                await websocket.send_json({
+                    "status": "error",
+                    "message": "Internal server error"
+                })
                 
     except WebSocketDisconnect:
+        print(f"Client disconnected: {game_id}")
         connection_manager.disconnect(game_id)
         game_manager.remove_game(game_id)
     except Exception as e:
+        print(f"WebSocket error: {e}")
         connection_manager.disconnect(game_id)
         game_manager.remove_game(game_id)
-        await websocket.close(code=1011, reason=str(e))
+        try:
+            await websocket.close(code=1011, reason=str(e))
+        except:
+            pass  # Connection might already be closed
 
 @app.on_event("shutdown")
 async def shutdown_event():

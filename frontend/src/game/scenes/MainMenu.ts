@@ -12,13 +12,16 @@ export class MainMenu extends Scene {
   }
 
   create() {
-    this.background = this.add.image(512, 384, "background");
-    this.duelimg = this.add.image(513, 454, "duelimg");
+    const centerX = this.cameras.main.centerX;
+    const centerY = this.cameras.main.centerY;
+
+    this.background = this.add.image(centerX, centerY, "background");
+    this.duelimg = this.add.image(centerX, 454, "duelimg");
 
     this.logo = this.add.image(513, 354, "logoimg");
 
     this.title = this.add
-      .text(512, 550, "PRESS START TO CONTINUE", {
+      .text(512, 550, "PRESS [ENTER] TO CONTINUE", {
         fontFamily: "Public Pixel",
         fontSize: 18,
         color: "#ffffff",
