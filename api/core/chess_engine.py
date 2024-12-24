@@ -75,6 +75,17 @@ class DarkChessEngine:
             print(f"Position evaluation failed: {e}")
             return 0
 
+    def get_game_stage(self) -> str:
+        evaluation = self.evaluate_position()
+        material_count = len(self.board.piece_map())
+        
+        if material_count > 28:  # Opening
+            return "AWAKENING" 
+        elif material_count > 15:  # Middlegame
+            return "CORRUPTION"
+        else:  # Endgame
+            return "FINAL_BATTLE"
+            
     def get_darkling_wave(self) -> DarklingWave:
         try:
             evaluation = self.evaluate_position()
@@ -83,7 +94,6 @@ class DarkChessEngine:
                 GamePhase.AWAKENING: 1.0,
                 GamePhase.CORRUPTION: 1.5,
                 GamePhase.FINAL_BATTLE: 2.0,
-                GamePhase.ENDGAME: 2.5
             }
             evaluation = max(-500, min(500, evaluation))
             chess_factor = max(1, abs(min(0, evaluation)) / 100)
