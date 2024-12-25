@@ -7,7 +7,7 @@ class WebSocketService {
 
   private constructor(gameId: string) {
     this.gameId = gameId;
-    const backendUrl = `ws://your-backend-url:5328/ws/${gameId}`;
+    const backendUrl = `ws://localhost:5328/ws/${gameId}`;
     this.socket = new WebSocket(backendUrl);
 
     this.socket.onopen = () => {

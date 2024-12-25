@@ -60,6 +60,24 @@ export class Preloader extends Scene {
       getAssetUrl("portrait/elara_portrait_dark.png")
     );
 
+    this.load.image(
+      "arrow-left",
+      getAssetUrl("UI/Mini Arrows/x2/Mini_Arrows1.png")
+    );
+    this.load.image(
+      "arrow-right",
+      getAssetUrl("UI/Mini Arrows/x2/Mini_Arrows2.png")
+    );
+    this.load.image(
+      "popup-bg",
+      getAssetUrl("UI/Popup Screen/Blurry_popup.png")
+    );
+
+    this.load.image(
+      "seperator",
+      getAssetUrl("UI/Gothic patterns/Pattern01 x2.png")
+    );
+
     this.loadAtlasAssets();
   }
 

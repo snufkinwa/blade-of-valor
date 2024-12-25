@@ -58,14 +58,14 @@ export default class Architect {
         key: "appear",
         start: 211,
         end: 240,
-        frameRate: 12,
+        frameRate: 10,
         repeat: 0,
       },
       {
         key: "disappear",
         start: 241,
         end: 265,
-        frameRate: 12,
+        frameRate: 10,
         repeat: 0,
       },
       {
