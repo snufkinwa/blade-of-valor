@@ -105,6 +105,12 @@ export class Preloader extends Scene {
       getAssetUrl("UI/scalable+screen/Variations/Type+2/Screen__4.png"),
       getAssetUrl("data/dialoguebox.json")
     );
+
+    this.load.atlas(
+      "architect_portrait",
+      getAssetUrl("data/architect_portrait.png"),
+      getAssetUrl("data/architect_portrait.json")
+    );
   }
 
   create() {
