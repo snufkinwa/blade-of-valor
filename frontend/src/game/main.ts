@@ -28,6 +28,16 @@ const config: Phaser.Types.Core.GameConfig = {
     GameOver,
     Tutorial,
   ],
+  physics: {
+    default: "arcade",
+    arcade: {
+      gravity: {
+        y: 1000,
+        x: 0,
+      },
+      debug: false,
+    },
+  },
 };
 
 const StartGame = (parent: string) => {
