@@ -98,20 +98,16 @@ export class Player extends Physics.Arcade.Sprite {
 
       case "jump":
         if (this.jumpCount < this.maxJumps) {
-          this.moveState.isJumping = true; // Set jumping state
+          this.moveState.isJumping = true;
           this.moveState.isFalling = false;
-
-          // Increment jump count
           this.jumpCount++;
 
-          // Set velocity
-          body.setVelocityY(this.jumpCount === 1 ? -450 : -400); // Slightly different force for mid-air jump
+          body.setVelocityY(this.jumpCount === 1 ? -450 : -400);
 
-          this.isHoldingJump = true; // Enable holding for incremental jump
-          this.jumpHoldTimer = 0; // Reset timer
-          this.lastJumpHoldTime = this.scene.time.now; // Initialize timing
+          this.isHoldingJump = true;
+          this.jumpHoldTimer = 0;
+          this.lastJumpHoldTime = this.scene.time.now;
 
-          // Trigger jump animation
           this.playAnimation("jump");
         }
         break;
@@ -174,12 +170,10 @@ export class Player extends Physics.Arcade.Sprite {
     EventBus.on("jump-pressed", () => {
       const body = this.getBody();
 
-      // Always play jump animation
       if (!this.anims.isPlaying || this.anims.currentAnim?.key !== "jump") {
         this.playAnimation("jump");
       }
 
-      // Trigger jump logic
       this.handleAction({ type: "jump" });
     });
 
@@ -289,7 +283,7 @@ export class Player extends Physics.Arcade.Sprite {
     ) {
       if (this.moveState.isRunning && body.velocity.x !== 0) {
         this.playAnimation("run");
-      } else {
+      } else if (body.velocity.x === 0 && body.velocity.y === 0) {
         body.setVelocityX(0);
         this.playAnimation("idle");
       }
@@ -318,6 +312,7 @@ export class Player extends Physics.Arcade.Sprite {
       if (this.moveState.isFalling || this.moveState.isJumping) {
         this.moveState.isFalling = false;
         this.moveState.isJumping = false;
+        this.jumpCount = 0;
         this.resetState();
       }
     }
@@ -329,19 +324,15 @@ export class Player extends Physics.Arcade.Sprite {
       }
     }
 
-    if (this.isHoldingJump && this.jumpHoldTimer < this.MAX_JUMP_HOLD_TIME) {
+    if (this.isHoldingJump && this.moveState.isJumping) {
       const elapsed = currentTime - this.lastJumpHoldTime;
 
-      if (elapsed >= 16) {
-        // ~60 FPS
+      if (elapsed >= 16 && this.jumpHoldTimer < this.MAX_JUMP_HOLD_TIME) {
         const currentVelocity = body.velocity.y;
-
         if (currentVelocity > -900) {
-          // Cap velocity at -900
           body.setVelocityY(currentVelocity + this.JUMP_HOLD_ACCELERATION);
           this.jumpHoldTimer += elapsed;
         }
-
         this.lastJumpHoldTime = currentTime;
       }
     } else {
@@ -351,7 +342,7 @@ export class Player extends Physics.Arcade.Sprite {
 
   private setupAnimations(scene: Phaser.Scene, texture: string): void {
     const animations = [
-      { key: "idle", start: 1, end: 3, frameRate: 20, repeat: -1 },
+      { key: "idle", start: 1, end: 3, frameRate: 1, repeat: -1 },
       { key: "lookIntro", start: 4, end: 9, frameRate: 10, repeat: 0 },
       { key: "lookBlink", start: 10, end: 11, frameRate: 10, repeat: -1 },
       { key: "lookBack", start: 12, end: 15, frameRate: 10, repeat: 0 },
