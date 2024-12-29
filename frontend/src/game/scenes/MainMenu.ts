@@ -114,7 +114,7 @@ export class MainMenu extends Scene {
           break;
         case 1: // Continue
           // TODO: Add continue game logic
-          this.scene.start("Intro"); // Temporary
+          this.scene.start("Platformer"); // Temporary
           break;
         case 2: // Tutorial
           this.scene.start("Tutorial");

@@ -1,31 +1,33 @@
-from random import random, choice
-import chess.engine
+from random import choice
+from stockfish import Stockfish
 from models.enums import DarknessState, GamePhase
 from models.entities import DarklingWave, GameState
 from core.darkness import DarknessSystem
+from config.settings import Settings
 from typing import List
+import chess
 
 class DarkChessEngine:
-    def __init__(self):
+    def __init__(self, settings: Settings):
         self.board = chess.Board()
-        self.engine = chess.engine.SimpleEngine.popen_uci("stockfish")
+        self.stockfish = Stockfish(path=settings.STOCKFISH_PATH)
         self.darkness_system = DarknessSystem()
         self.base_darkling_count = 3
         self.game_phase = GamePhase.AWAKENING
-        self._configure_engine()
+        self._configure_engine(settings)
 
-    def _configure_engine(self):
+    def _configure_engine(self, settings: Settings):
         state = self.darkness_system.get_state()
         skill_levels = {
-            DarknessState.LIGHT: 20,    
-            DarknessState.TWILIGHT: 15, 
-            DarknessState.SHADOW: 10,   
-            DarknessState.VOID: 5      
+            DarknessState.LIGHT: settings.ENGINE_DIFFICULTY,    
+            DarknessState.TWILIGHT: int(settings.ENGINE_DIFFICULTY * 0.75), 
+            DarknessState.SHADOW: int(settings.ENGINE_DIFFICULTY * 0.5),   
+            DarknessState.VOID: int(settings.ENGINE_DIFFICULTY * 0.25)      
         }
-        self.engine.configure({
-            "Skill Level": skill_levels[state],
-            "Threads": 2,
-            "Hash": 512
+        self.stockfish.set_skill_level(skill_levels[state])
+        self.stockfish.update_engine_parameters({
+            "Threads": settings.ENGINE_THREADS,
+            "Hash": settings.ENGINE_HASH
         })
 
     def calculate_move_quality(self, darkness_state: DarknessState) -> float:
@@ -117,18 +119,35 @@ class DarkChessEngine:
                 corruption_level=0
             )
 
-    def make_move(self, use_dark_power: bool) -> GameState:
+    def make_move(self, move_uci: str, use_dark_power: bool = False) -> GameState:
+        # Validate and make player move
+        try:
+            move = chess.Move.from_uci(move_uci)
+            if move not in self.board.legal_moves:
+                raise ValueError("Illegal move")
+            self.board.push(move)
+        except ValueError as e:
+            raise ValueError(f"Invalid move: {e}")
+
+        # Update darkness system
         if use_dark_power:
             self.darkness_system.increase_corruption()
-        darkness_state = self.darkness_system.get_state()
-        moves = self.get_moves(darkness_state)
-        chosen_move = choice(moves)
-        self.board.push(chosen_move)
         
+        # Get engine's response
+        self.stockfish.set_position([move.uci() for move in self.board.move_stack])
+        engine_move = self.stockfish.get_best_move()
+        
+        if engine_move:
+            self.board.push(chess.Move.from_uci(engine_move))
+
+        # Generate response state
         stats = self.darkness_system.get_stats()
+        wave = self.get_darkling_wave()
+        
         return GameState(
-            move=chosen_move.uci(),
-            darkling_wave=self.get_darkling_wave(),
+            valid_moves=[m.uci() for m in self.board.legal_moves],
+            engine_move=engine_move,
+            darkling_wave=wave,
             darkness_stats=stats
         )
 

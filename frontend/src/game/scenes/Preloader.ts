@@ -55,8 +55,11 @@ export class Preloader extends Scene {
 
     this.loadUIAssets();
     this.loadCharacterAssets();
-    this.loadBackgrounds();
+    this.loadBackgroundAssets();
     this.loadTilemapAssets();
+
+    // Load dialogue data
+    this.load.json("dialogue", getAssetUrl("data/dialogue.json"));
   }
 
   private loadUIAssets() {
@@ -106,18 +109,6 @@ export class Preloader extends Scene {
     );
   }
 
-  private loadBackgrounds() {
-    [
-      "Background",
-      "Background_Pillars",
-      "Background_Fog",
-      "Fog",
-      "Fog_Top",
-    ].forEach((name) => {
-      this.load.image(name, getAssetUrl(`enviroment/Opening/${name}.png`));
-    });
-  }
-
   private loadTilemapAssets() {
     // Load tilemap JSON
     this.load.tilemapTiledJSON(
@@ -126,64 +117,32 @@ export class Preloader extends Scene {
     );
 
     // Load tileset images
-    const tilesets = [
-      "16x16",
-      "blxo",
-      "leftwall",
-      "blcks4",
-      "blcks2",
-      "Sprite-00012",
-      "Sprite-13",
-      "Sprite-0013",
-      "Sprite-02023",
-      "Sprite-00216",
-      "Sprite-02019",
-      "Sprite-00214",
-      "Sprite-0117",
-      "Sprite-0007",
-      "Sprite-0008",
-      "Sprite-0009",
-      "Sprite-0010",
-      "Sprite-0012",
-      "Sprite-0011",
-      "Sprite-014",
-      "Sprite5445-0013",
-      "Sprite35",
-      "Sprite89",
-      "Sprite2",
-      "Spritedf-0003",
-      "Spritedf-0006",
-      "Spritefd-0002",
-      "Spr8",
-      "Spr30",
-      "Spr9",
-      "Cage_1",
-      "Cage_2",
-      "datatile",
-      "chapel",
-      "latter",
-      "ire",
-      "light545",
-      "bottonsds",
-      "Spriihj0041",
-      "S44kj",
-      "S044",
-      "S47",
-      "S48",
-      "5154",
-      "corner32x32",
-      "45231",
-      "000",
-      "050",
-      "blxo_02",
+    this.load.image(
+      "awakening",
+      getAssetUrl("enviroment/tilemap/awakening.png")
+    );
+    this.load.image(
+      "awakeningbg",
+      getAssetUrl("enviroment/tilemap/awakeningbg.png")
+    );
+    this.load.image(
+      "awakeningPTOG",
+      getAssetUrl("enviroment/tilemap/awakeningPTOG.png")
+    );
+  }
+
+  private loadBackgroundAssets() {
+    const backgrounds = [
+      "Background",
+      "Background_Pillars",
+      "Background_Fog",
+      "Fog_Top",
+      "Fog_Top",
     ];
 
-    tilesets.forEach((name) => {
-      this.load.image(name, getAssetUrl(`enviroment/tilemap/${name}.png`));
+    backgrounds.forEach((name) => {
+      this.load.image(name, getAssetUrl(`enviroment/Opening/${name}.png`));
     });
-
-    // Load dialogue data
-    this.load.json("dialogue", getAssetUrl("data/dialogue.json"));
   }
 
   create() {
