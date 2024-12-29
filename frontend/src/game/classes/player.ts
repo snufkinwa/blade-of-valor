@@ -60,9 +60,9 @@ export class Player extends Physics.Arcade.Sprite {
       { key: "dash", start: 30, end: 33, frameRate: 10, repeat: -1 },
       { key: "roll", start: 55, end: 62, frameRate: 10, repeat: -1 },
       { key: "recoverBalance", start: 63, end: 72, frameRate: 10, repeat: 0 },
-      { key: "attack1", start: 73, end: 82, frameRate: 10, repeat: 0 },
-      { key: "attack2", start: 83, end: 92, frameRate: 10, repeat: 0 },
-      { key: "attack3", start: 93, end: 103, frameRate: 10, repeat: 0 },
+      { key: "attack1", start: 73, end: 82, frameRate: 15, repeat: 0 },
+      { key: "attack2", start: 83, end: 92, frameRate: 15, repeat: 0 },
+      { key: "attack3", start: 93, end: 103, frameRate: 15, repeat: 0 },
       {
         key: "transformBefore",
         start: 123,
@@ -162,40 +162,59 @@ export class Player extends Physics.Arcade.Sprite {
   }
 
   private queueAttack(type: string): void {
-    this.attackQueue.push(type);
-    if (!this.isProcessingAttacks) {
+    if (this.moveState.isRolling || this.moveState.isTransforming) return;
+
+    // Limit queue size to prevent memory issues
+    if (this.attackQueue.length < 3) {
+      this.attackQueue.push(type);
+    }
+
+    if (!this.isProcessingAttacks && !this.moveState.isAttacking) {
       this.processAttackQueue();
     }
   }
 
   private processAttackQueue(): void {
-    if (this.attackQueue.length === 0 || this.moveState.isRolling) {
+    if (this.attackQueue.length === 0) {
       this.isProcessingAttacks = false;
+      this.moveState.isAttacking = false;
       return;
     }
 
     this.isProcessingAttacks = true;
-    const nextAttack = this.attackQueue[0];
     this.moveState.isAttacking = true;
+    const nextAttack = this.attackQueue[0];
 
-    this.play(nextAttack, true).once("animationcomplete", () => {
-      this.attackQueue.shift();
+    // Clear any existing animation complete listeners
+    this.removeAllListeners(Phaser.Animations.Events.ANIMATION_COMPLETE);
 
-      if (this.attackQueue.length > 0) {
-        // Continue to next attack
-        this.processAttackQueue();
-      } else {
-        // End attack chain with recovery
-        this.play("recoverBalance", true).once("animationcomplete", () => {
-          this.moveState.isAttacking = false;
-          this.isProcessingAttacks = false;
-          if (!this.moveState.isJumping && !this.moveState.isFalling) {
-            this.play("idle", true);
-          }
-        });
+    this.play(nextAttack, true).once(
+      Phaser.Animations.Events.ANIMATION_COMPLETE,
+      () => {
+        if (this.attackQueue.length > 0) {
+          this.attackQueue.shift();
+        }
+
+        if (this.attackQueue.length > 0 && !this.moveState.isRolling) {
+          this.processAttackQueue();
+        } else {
+          this.play("recoverBalance", true).once(
+            Phaser.Animations.Events.ANIMATION_COMPLETE,
+            () => {
+              this.isProcessingAttacks = false;
+              this.moveState.isAttacking = false;
+              this.attackQueue = [];
+
+              if (!this.moveState.isJumping && !this.moveState.isFalling) {
+                this.play("idle", true);
+              }
+            }
+          );
+        }
       }
-    });
+    );
   }
+
   private handleDash(): void {
     if (!this.moveState.isDashing && !this.moveState.isRolling) {
       this.moveState.isDashing = true;
