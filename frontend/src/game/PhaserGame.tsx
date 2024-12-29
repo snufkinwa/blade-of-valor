@@ -84,10 +84,10 @@ export const PhaserGame = forwardRef<IRefPhaserGame, IProps>(
           // Spacebar
           EventBus.emit("jump-pressed");
         }
-        if (event.key === "Shift") {
+        if (event.key === "q" || event.key === "Q") {
           EventBus.emit("dash-pressed");
         }
-        if (event.key === "Control") {
+        if (event.key === "r" || event.key === "R") {
           EventBus.emit("roll-pressed");
         }
 
@@ -116,15 +116,11 @@ export const PhaserGame = forwardRef<IRefPhaserGame, IProps>(
         if (event.key === " ") {
           EventBus.emit("jump-released");
         }
-        if (event.key === "Shift") {
+        if (event.key === "q" || event.key === "Q") {
           EventBus.emit("dash-released");
         }
-        if (event.key === "Control") {
-          EventBus.emit("roll-released");
-          // Automatically trigger recover balance after roll
-          setTimeout(() => {
-            EventBus.emit("recover-balance");
-          }, 300); // Adjust timing as needed
+        if (event.key === "r" || event.key === "R") {
+          EventBus.emit("recover-balance");
         }
       };
 

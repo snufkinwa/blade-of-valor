@@ -7,11 +7,15 @@ export class Preloader extends Scene {
   }
 
   init() {
+    // Loading bar setup
     this.load.image(
       "loadingBar",
       getAssetUrl("UI/Loading Bar/Loading_Bar x2.png")
     );
+    this.setupLoadingBar();
+  }
 
+  private setupLoadingBar() {
     this.load.once("complete", () => {
       const centerX = this.cameras.main.centerX;
       const centerY = this.cameras.main.centerY;
@@ -19,7 +23,6 @@ export class Preloader extends Scene {
       const loadingBarBg = this.add
         .image(centerX, centerY, "loadingBar")
         .setOrigin(0.5);
-
       const progressBar = this.add
         .image(centerX - 230, centerY, "loadingBar")
         .setOrigin(0, 0.5);
@@ -32,7 +35,6 @@ export class Preloader extends Scene {
         progressBar.height
       );
       maskGraphics.fillRectShape(maskRect);
-
       progressBar.setMask(maskGraphics.createGeometryMask());
 
       this.load.on("progress", (progress: number) => {
@@ -46,175 +48,142 @@ export class Preloader extends Scene {
   }
 
   preload() {
-    this.load.on("filecomplete", (key: string, type: string, data: any) => {
-      console.log(`File Complete: ${key}, Type: ${type}`);
+    // Debug logging
+    this.load.on("filecomplete", (key: string) =>
+      console.log(`Loaded: ${key}`)
+    );
+
+    this.loadUIAssets();
+    this.loadCharacterAssets();
+    this.loadBackgrounds();
+    this.loadTilemapAssets();
+  }
+
+  private loadUIAssets() {
+    const uiAssets = {
+      "arrow-left": "UI/Mini Arrows/x2/Mini_Arrows1.png",
+      "arrow-right": "UI/Mini Arrows/x2/Mini_Arrows2.png",
+      "popup-bg": "UI/Popup Screen/Blurry_popup.png",
+      seperator: "UI/Gothic patterns/Pattern01 x2.png",
+    };
+
+    Object.entries(uiAssets).forEach(([key, path]) => {
+      this.load.image(key, getAssetUrl(path));
     });
 
-    // Main Menu Assets
-    this.load.image(
-      "arrow-left",
-      getAssetUrl("UI/Mini Arrows/x2/Mini_Arrows1.png")
+    // UI Atlas
+    this.load.atlas(
+      "ui",
+      getAssetUrl("UI/scalable+screen/Variations/Type+2/Screen__4.png"),
+      getAssetUrl("data/dialoguebox.json")
     );
-    this.load.image(
-      "arrow-right",
-      getAssetUrl("UI/Mini Arrows/x2/Mini_Arrows2.png")
-    );
-    this.load.image(
-      "popup-bg",
-      getAssetUrl("UI/Popup Screen/Blurry_popup.png")
-    );
+  }
 
-    this.load.image(
-      "seperator",
-      getAssetUrl("UI/Gothic patterns/Pattern01 x2.png")
-    );
+  private loadCharacterAssets() {
+    // Character atlases
+    const atlases = {
+      architect: ["data/architect.png", "data/architect.json"],
+      light: ["data/light.png", "data/light.json"],
+      dark: ["data/dark.png", "data/dark.json"],
+      architect_portrait: [
+        "data/architect_portrait.png",
+        "data/architect_portrait.json",
+      ],
+    };
 
-    //Intro assets
-    this.load.json("dialogue", getAssetUrl("data/dialogue.json"));
+    Object.entries(atlases).forEach(([key, [png, json]]) => {
+      this.load.atlas(key, getAssetUrl(png), getAssetUrl(json));
+    });
+
+    // Character portraits
     this.load.image(
       "elara_portrait",
       getAssetUrl("portrait/elara_portrait_light.png")
     );
     this.load.image(
       "elara_portrait_dark",
-      getAssetUrl("portrait/elara_portrait_dark.png")
-    );
-
-    this.preloadAWAKENING();
-
-    this.loadAtlasAssets();
-  }
-
-  private loadAtlasAssets() {
-    this.load.atlas(
-      "architect",
-      getAssetUrl("data/architect.png"),
-      getAssetUrl("data/architect.json")
-    );
-
-    this.load.atlas(
-      "light",
-      getAssetUrl("sprites/light.png"),
-      getAssetUrl("data/light.json")
-    );
-
-    this.load.atlas(
-      "dark",
-      getAssetUrl("sprites/dark.png"),
-      getAssetUrl("data/dark.json")
-    );
-
-    this.load.atlas(
-      "ui",
-      getAssetUrl("UI/scalable+screen/Variations/Type+2/Screen__4.png"),
-      getAssetUrl("data/dialoguebox.json")
-    );
-
-    this.load.atlas(
-      "architect_portrait",
-      getAssetUrl("data/architect_portrait.png"),
-      getAssetUrl("data/architect_portrait.json")
+      getAssetUrl("portrait/elara_portrait_black.png")
     );
   }
 
-  private preloadAWAKENING() {
-    // Environment backgrounds
-    const backgrounds = [
+  private loadBackgrounds() {
+    [
       "Background",
       "Background_Pillars",
       "Background_Fog",
       "Fog",
       "Fog_Top",
-    ];
-
-    backgrounds.forEach((name) => {
+    ].forEach((name) => {
       this.load.image(name, getAssetUrl(`enviroment/Opening/${name}.png`));
     });
+  }
 
-    // Base tiles
-    ["16x16", "blxo", "leftwall", "blcks4", "blcks2"].forEach((name) => {
+  private loadTilemapAssets() {
+    // Load tilemap JSON
+    this.load.tilemapTiledJSON(
+      "awakening",
+      getAssetUrl("enviroment/tilemap/awakening.json")
+    );
+
+    // Load tileset images
+    const tilesets = [
+      "16x16",
+      "blxo",
+      "leftwall",
+      "blcks4",
+      "blcks2",
+      "Sprite-00012",
+      "Sprite-13",
+      "Sprite-0013",
+      "Sprite-02023",
+      "Sprite-00216",
+      "Sprite-02019",
+      "Sprite-00214",
+      "Sprite-0117",
+      "Sprite-0007",
+      "Sprite-0008",
+      "Sprite-0009",
+      "Sprite-0010",
+      "Sprite-0012",
+      "Sprite-0011",
+      "Sprite-014",
+      "Sprite5445-0013",
+      "Sprite35",
+      "Sprite89",
+      "Sprite2",
+      "Spritedf-0003",
+      "Spritedf-0006",
+      "Spritefd-0002",
+      "Spr8",
+      "Spr30",
+      "Spr9",
+      "Cage_1",
+      "Cage_2",
+      "datatile",
+      "chapel",
+      "latter",
+      "ire",
+      "light545",
+      "bottonsds",
+      "Spriihj0041",
+      "S44kj",
+      "S044",
+      "S47",
+      "S48",
+      "5154",
+      "corner32x32",
+      "45231",
+      "000",
+      "050",
+      "blxo_02",
+    ];
+
+    tilesets.forEach((name) => {
       this.load.image(name, getAssetUrl(`enviroment/tilemap/${name}.png`));
     });
 
-    // Sprite series
-    [
-      "00012",
-      "13",
-      "0013",
-      "35",
-      "89",
-      "2",
-      "02023",
-      "00216",
-      "02019",
-      "00214",
-      "0117",
-      "5445-0013",
-      "0007",
-      "0008",
-      "0009",
-      "0010",
-      "0012",
-      "0011",
-      "014",
-    ].forEach((id) => {
-      this.load.image(
-        `sprite${id}`,
-        getAssetUrl(`enviroment/tilemap/Sprite-${id}.png`)
-      );
-    });
-
-    // Special sprites with different prefix format
-    ["df-0003", "df-0006", "fd-0002"].forEach((id) => {
-      this.load.image(
-        `sprite${id}`,
-        getAssetUrl(`enviroment/tilemap/Sprite${id}.png`)
-      );
-    });
-
-    // Numbered sprites
-    ["8", "30", "9"].forEach((num) => {
-      this.load.image(
-        `spr${num}`,
-        getAssetUrl(`enviroment/tilemap/Spr${num}.png`)
-      );
-    });
-
-    // Environmental elements
-    const envElements = {
-      cage1: "Cage_1",
-      cage2: "Cage_2",
-      datatile: "datatile",
-      chapel: "chapel",
-      latter: "latter",
-      ire: "ire",
-      light545: "light545",
-      num854564: "854564",
-      bottonsds: "bottonsds",
-      spriihj0041: "Spriihj0041",
-    };
-
-    Object.entries(envElements).forEach(([key, filename]) => {
-      this.load.image(key, getAssetUrl(`enviroment/tilemap/${filename}.png`));
-    });
-
-    // S-series
-    ["44kj", "043", "044", "47", "48"].forEach((id) => {
-      this.load.image(`s${id}`, getAssetUrl(`enviroment/tilemap/S${id}.png`));
-    });
-
-    // Miscellaneous
-    ["5154", "corner32x32", "45231", "000", "050", "blxo_02"].forEach(
-      (name) => {
-        this.load.image(name, getAssetUrl(`enviroment/tilemap/${name}.png`));
-      }
-    );
-
-    // Load tilemap data
-    this.load.tilemapTiledJSON(
-      "awakening",
-      getAssetUrl("tilemap/awakening.json")
-    );
+    // Load dialogue data
+    this.load.json("dialogue", getAssetUrl("data/dialogue.json"));
   }
 
   create() {
