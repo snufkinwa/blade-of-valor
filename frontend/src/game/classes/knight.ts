@@ -1,6 +1,7 @@
 import { Scene, GameObjects, Physics } from "phaser";
 
 export class Knight extends Physics.Arcade.Sprite {
+  hp: number = 100;
   private moveState = {
     isCharging: false,
     isRunning: false,

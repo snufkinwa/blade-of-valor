@@ -99,7 +99,6 @@ export class Preloader extends Scene {
   private loadCharacterAssets() {
     // Character atlases
     const atlases = {
-      architect: ["data/architect.png", "data/architect.json"],
       light: ["data/light.png", "data/light.json"],
       dark: ["data/dark.png", "data/dark.json"],
       architect_portrait: [

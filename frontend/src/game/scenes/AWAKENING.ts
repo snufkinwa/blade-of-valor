@@ -2,6 +2,7 @@ import { Scene, GameObjects, Cameras } from "phaser";
 import { EventBus } from "../EventBus";
 import { Player } from "../classes/player";
 import Darkling from "../classes/darkling";
+import HealthBar from "../classes/HealthBar";
 
 export class Platformer extends Scene {
   private map!: Phaser.Tilemaps.Tilemap;
@@ -10,6 +11,7 @@ export class Platformer extends Scene {
   private fogLayers: Record<string, GameObjects.TileSprite> = {};
   private player!: Player;
   private darklings!: Phaser.Physics.Arcade.Group;
+  private healthBar!: HealthBar;
   camera!: Cameras.Scene2D.Camera;
 
   constructor() {
@@ -101,7 +103,7 @@ export class Platformer extends Scene {
 
   private createBackgroundLayers() {
     const width = 1024;
-    const height = 768;
+    const height = 650;
 
     const bgLayers = [
       { key: "Background", scroll: 0.1, offsetX: 0, offsetY: 0 },
@@ -125,7 +127,7 @@ export class Platformer extends Scene {
         .setDepth(-10 + index);
 
       if (key === "Background_Fog") {
-        tileSprite.setTileScale(1, 0.5);
+        tileSprite.setTileScale(1, 1);
       }
 
       this.imageLayers[key] = tileSprite;
@@ -139,10 +141,11 @@ export class Platformer extends Scene {
     this.fogLayers["fogTop1"] = this.add
       .tileSprite(0, 0, mapWidth, fogHeight, "Fog_Top")
       .setOrigin(0, 0)
-      .setTint(0x334455)
+      .setTint(0x000000)
       .setScrollFactor(0.8)
       .setAlpha(1)
-      .setDepth(5);
+      .setDepth(4)
+      .setScale(2.0);
 
     this.fogLayers["fogTop2"] = this.add
       .tileSprite(0, 0, mapWidth, fogHeight, "Fog_Top")
@@ -150,7 +153,8 @@ export class Platformer extends Scene {
       .setScrollFactor(0.6)
       .setTint(0x00000)
       .setAlpha(1)
-      .setDepth(4);
+      .setDepth(5)
+      .setScale(2.0);
   }
 
   private createPlayer() {
@@ -160,6 +164,9 @@ export class Platformer extends Scene {
       const body = this.player.body as Phaser.Physics.Arcade.Body;
       body.setSize(32, 50);
       body.setCollideWorldBounds(true);
+
+      this.healthBar = new HealthBar(this, 20, 20, "player_healthbar");
+      this.healthBar.setPosition(40, 40);
     }
   }
 
@@ -244,6 +251,10 @@ export class Platformer extends Scene {
     Object.values(this.fogLayers).forEach((layer) => {
       layer.tilePositionX = this.cameras.main.scrollX * layer.scrollFactorX;
     });
+
+    if (this.healthBar) {
+      this.healthBar.update(this.camera);
+    }
 
     this.player?.update?.();
   }
