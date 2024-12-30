@@ -113,7 +113,7 @@ export class Preloader extends Scene {
     // Load tilemap JSON
     this.load.tilemapTiledJSON(
       "awakening",
-      getAssetUrl("enviroment/tilemap/awakening.json")
+      getAssetUrl("enviroment/tilemap/awakeningtile-map.json")
     );
 
     // Load tileset images

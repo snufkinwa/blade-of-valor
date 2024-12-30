@@ -6,7 +6,7 @@ export class Platformer extends Scene {
   private map!: Phaser.Tilemaps.Tilemap;
   private layers: Record<string, Phaser.Tilemaps.TilemapLayer | null> = {};
   private imageLayers: Record<string, GameObjects.TileSprite> = {};
-  private fogLayers: Record<string, GameObjects.Image> = {};
+  private fogLayers: Record<string, GameObjects.TileSprite> = {};
   private player!: Player;
   camera!: Cameras.Scene2D.Camera;
 
@@ -21,7 +21,7 @@ export class Platformer extends Scene {
     this.createPlayer();
     this.setupPhysics();
     this.setupParallaxEffects();
-    this.createFogLayer();
+    this.createFogLayers();
     EventBus.emit("current-scene-ready", this);
   }
 
@@ -50,23 +50,43 @@ export class Platformer extends Scene {
       return;
     }
 
-    this.layers["Background"] = this.map.createLayer(
-      "BackGround",
-      backgroundTileset
-    );
+    this.layers["Background"] = this.map.createLayer("BackGround", [
+      backgroundTileset,
+      awakeningTileset,
+    ]);
     this.layers["Ground"] = this.map.createLayer("Ground", awakeningTileset);
     this.layers["Platforms"] = this.map.createLayer(
       "Platformers",
       platformTileset
     );
-    this.layers["Lights"] = this.map.createLayer("Lights", awakeningTileset);
-    this.layers["Other"] = this.map.createLayer("Other", awakeningTileset);
+    this.layers["Gutter"] = this.map.createLayer("Gutter", platformTileset);
+    this.layers["Lights"] = this.map.createLayer("Lights", [
+      awakeningTileset,
+      platformTileset,
+    ]);
+    this.layers["Other"] = this.map.createLayer("Other", [
+      awakeningTileset,
+      platformTileset,
+    ]);
+
+    this.layers["Cage"] = this.map.createLayer("Cage", awakeningTileset);
 
     if (this.layers["Ground"]) {
       this.layers["Ground"].setCollisionByExclusion([-1]);
     }
+
+    if (this.layers["Gutter"]) {
+      this.layers["Gutter"].setCollisionByExclusion([-1]);
+    }
+
     if (this.layers["Platforms"]) {
       this.layers["Platforms"].setCollisionByExclusion([-1]);
+      // Debug: Show collision boxes
+      this.layers["Platforms"].renderDebug(this.add.graphics(), {
+        tileColor: null,
+        collidingTileColor: new Phaser.Display.Color(243, 134, 48, 128),
+        faceColor: new Phaser.Display.Color(40, 39, 37, 255),
+      });
     }
 
     Object.values(this.layers).forEach((layer, index) => {
@@ -82,44 +102,61 @@ export class Platformer extends Scene {
 
     const bgLayers = [
       { key: "Background", scroll: 0.1, offsetX: 0, offsetY: 0 },
-      { key: "Background_Pillars", scroll: 0.2, offsetX: 0, offsetY: 0 },
-      { key: "Background_Fog", scroll: 0.3, offsetX: 480, offsetY: 690 },
+      { key: "Background_Pillars", scroll: 0.2, offsetX: -480, offsetY: 0 },
+      { key: "Background_Fog", scroll: 0.3, offsetX: 0, offsetY: 690 },
     ];
 
     bgLayers.forEach(({ key, scroll, offsetX, offsetY }, index) => {
-      this.imageLayers[key] = this.add
-        .tileSprite(0, 0, width, height, key)
+      const texture = this.textures.get(key);
+      const tileSprite = this.add.tileSprite(
+        offsetX,
+        offsetY,
+        this.map.widthInPixels,
+        height,
+        key
+      );
+
+      tileSprite
         .setOrigin(0, 0)
-        .setPosition(offsetX, offsetY)
         .setScrollFactor(0)
         .setDepth(-10 + index);
 
       if (key === "Background_Fog") {
-        this.imageLayers[key].setTileScale(1, 0);
+        tileSprite.setTileScale(1, 0.5);
       }
+
+      this.imageLayers[key] = tileSprite;
     });
   }
 
-  private createFogLayer() {
+  private createFogLayers() {
+    const fogHeight = 200; // Reduced height for top-only fog
+    const mapWidth = this.map.widthInPixels;
+
     this.fogLayers["fogTop1"] = this.add
-      .image(477, -1, "Fog_Top")
+      .tileSprite(0, 0, mapWidth, fogHeight, "Fog_Top")
       .setOrigin(0, 0)
-      .setScrollFactor(0)
+      .setTint(0x334455)
+      .setScrollFactor(0.8)
+      .setAlpha(1)
       .setDepth(5);
 
     this.fogLayers["fogTop2"] = this.add
-      .image(306.76, 0.59, "Fog_Top")
+      .tileSprite(0, 0, mapWidth, fogHeight, "Fog_Top")
       .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setTint(0x334455)
-      .setDepth(6);
+      .setScrollFactor(0.6)
+      .setTint(0x00000)
+      .setAlpha(1)
+      .setDepth(4);
   }
 
   private createPlayer() {
-    const groundY = 650;
+    const groundY = 530;
     this.player = new Player(this, 100, groundY, "light");
     if (this.player.body) {
-      (this.player.body as Phaser.Physics.Arcade.Body).setSize(32, 32);
+      const body = this.player.body as Phaser.Physics.Arcade.Body;
+      body.setSize(32, 50);
+      body.setCollideWorldBounds(true);
     }
   }
 
@@ -135,6 +172,11 @@ export class Platformer extends Scene {
     if (this.layers["Ground"]) {
       this.physics.add.collider(this.player, this.layers["Ground"]);
     }
+
+    if (this.layers["Gutter"]) {
+      this.physics.add.collider(this.player, this.layers["Gutter"]);
+    }
+
     if (this.layers["Platforms"]) {
       this.physics.add.collider(this.player, this.layers["Platforms"]);
     }
@@ -150,6 +192,7 @@ export class Platformer extends Scene {
 
   private setupParallaxEffects() {
     this.cameras.main.scrollX = 0;
+
     Object.entries(this.imageLayers).forEach(([key, layer]) => {
       const scrollFactor = parseFloat(key.match(/\d+/)?.[0] || "0.1") / 10;
       layer.setScrollFactor(scrollFactor);
@@ -157,9 +200,15 @@ export class Platformer extends Scene {
   }
 
   update() {
+    // Update background parallax
     Object.entries(this.imageLayers).forEach(([key, layer]) => {
       const scrollFactor = parseFloat(key.match(/\d+/)?.[0] || "0.1") / 10;
       layer.tilePositionX = this.cameras.main.scrollX * scrollFactor;
+    });
+
+    // Update fog parallax
+    Object.values(this.fogLayers).forEach((layer) => {
+      layer.tilePositionX = this.cameras.main.scrollX * layer.scrollFactorX;
     });
 
     this.player?.update?.();
