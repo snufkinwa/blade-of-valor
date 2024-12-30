@@ -1,6 +1,7 @@
 import { Scene, GameObjects, Cameras } from "phaser";
 import { EventBus } from "../EventBus";
 import { Player } from "../classes/player";
+import Darkling from "../classes/darkling";
 
 export class Platformer extends Scene {
   private map!: Phaser.Tilemaps.Tilemap;
@@ -8,6 +9,7 @@ export class Platformer extends Scene {
   private imageLayers: Record<string, GameObjects.TileSprite> = {};
   private fogLayers: Record<string, GameObjects.TileSprite> = {};
   private player!: Player;
+  private darklings!: Phaser.Physics.Arcade.Group;
   camera!: Cameras.Scene2D.Camera;
 
   constructor() {
@@ -19,6 +21,7 @@ export class Platformer extends Scene {
     this.createTilemap();
     this.createBackgroundLayers();
     this.createPlayer();
+    this.createDarklings();
     this.setupPhysics();
     this.setupParallaxEffects();
     this.createFogLayers();
@@ -157,6 +160,37 @@ export class Platformer extends Scene {
       const body = this.player.body as Phaser.Physics.Arcade.Body;
       body.setSize(32, 50);
       body.setCollideWorldBounds(true);
+    }
+  }
+
+  private createDarklings(): void {
+    this.darklings = this.physics.add.group({
+      classType: Darkling,
+      runChildUpdate: true, // Ensures Darklings' update method is called
+    });
+
+    // Define the number of darklings to spawn
+    const numberOfDarklings = 5; // Adjust this as needed
+
+    // Get map dimensions
+    const mapWidth = this.map.widthInPixels;
+    const mapHeight = this.map.heightInPixels;
+
+    // Spawn darklings randomly within the map bounds
+    for (let i = 0; i < numberOfDarklings; i++) {
+      const spawnX = Phaser.Math.Between(0, mapWidth);
+      const spawnY = Phaser.Math.Between(0, mapHeight);
+
+      const darkling = new Darkling(this, spawnX, spawnY);
+      this.darklings.add(darkling);
+    }
+
+    // Add collision with ground and platforms
+    if (this.layers["Ground"]) {
+      this.physics.add.collider(this.darklings, this.layers["Ground"]);
+    }
+    if (this.layers["Platforms"]) {
+      this.physics.add.collider(this.darklings, this.layers["Platforms"]);
     }
   }
 

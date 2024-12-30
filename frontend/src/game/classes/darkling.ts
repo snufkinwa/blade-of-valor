@@ -21,8 +21,7 @@ export default class Darkling extends Physics.Arcade.Sprite {
 
     const body = this.body as Physics.Arcade.Body;
     if (body) {
-      body.setSize(40, 30);
-      body.setOffset(11, 3);
+      body.setSize(32, 28);
       body.setCollideWorldBounds(true);
     }
 
@@ -31,6 +30,8 @@ export default class Darkling extends Physics.Arcade.Sprite {
   }
 
   private initAnimations(): void {
+    console.log("Available textures:", this.scene.textures.list);
+
     const animConfigs = [
       {
         key: "darkling-idle",

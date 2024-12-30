@@ -57,6 +57,7 @@ export class Preloader extends Scene {
     this.loadCharacterAssets();
     this.loadBackgroundAssets();
     this.loadTilemapAssets();
+    this.loadOrbs();
 
     // Load dialogue data
     this.load.json("dialogue", getAssetUrl("data/dialogue.json"));
@@ -68,6 +69,8 @@ export class Preloader extends Scene {
       "arrow-right": "UI/Mini Arrows/x2/Mini_Arrows2.png",
       "popup-bg": "UI/Popup Screen/Blurry_popup.png",
       seperator: "UI/Gothic patterns/Pattern01 x2.png",
+      boss_healthbar: "healthbar/Boss_healthbar.png",
+      player_healthbar: "healthbar/healthbar_v2.png",
     };
 
     Object.entries(uiAssets).forEach(([key, path]) => {
@@ -82,6 +85,17 @@ export class Preloader extends Scene {
     );
   }
 
+  private loadOrbs() {
+    const orbAssets = {
+      collectOrbs: ["data/collectorbs.png", "data/collectorbs.json"],
+      Orbs: ["data/Orbs.png", "data/orbs.json"],
+    };
+
+    Object.entries(orbAssets).forEach(([key, [png, json]]) => {
+      this.load.atlas(key, getAssetUrl(png), getAssetUrl(json));
+    });
+  }
+
   private loadCharacterAssets() {
     // Character atlases
     const atlases = {
@@ -92,6 +106,9 @@ export class Preloader extends Scene {
         "data/architect_portrait.png",
         "data/architect_portrait.json",
       ],
+      darkling: ["data/darkling.png", "data/darkling.json"],
+      knight: ["data/bloodknight.png", "data/bloodknight.json"],
+      droid: ["data/droid.png", "data/droid.json"],
     };
 
     Object.entries(atlases).forEach(([key, [png, json]]) => {
