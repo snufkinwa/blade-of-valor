@@ -27,8 +27,7 @@ export class CombatSystem {
       50,
       "health-bar-bg",
       "health-bar-fill",
-      "boss-bar-bg",
-      "boss-bar-fill"
+      "boss-bar-bg"
     );
   }
 

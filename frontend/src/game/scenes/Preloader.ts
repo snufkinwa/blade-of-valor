@@ -58,6 +58,7 @@ export class Preloader extends Scene {
     this.loadBackgroundAssets();
     this.loadTilemapAssets();
     this.loadOrbs();
+    this.loadAudioAssets();
 
     // Load dialogue data
     this.load.json("dialogue", getAssetUrl("data/dialogue.json"));
@@ -71,6 +72,12 @@ export class Preloader extends Scene {
       seperator: "UI/Gothic patterns/Pattern01 x2.png",
       boss_healthbar: "healthbar/Boss_healthbar.png",
       player_healthbar: "healthbar/healthbar_v2.png",
+      dark_bar: "healthbar/Dark_bar.png",
+      stamina_mana: "healthbar/light_bar.png",
+      boss_bar: "healthbar/boss_bar.png",
+      "crystal-dark": "healthbar/Abyssalorb15.png",
+      "crystal-light": "healthbar/Abyssalorb1_Variant 4_1.png",
+      broken_purple_crystal: "healthbar/Abyssalorb9.png",
     };
 
     Object.entries(uiAssets).forEach(([key, path]) => {
@@ -82,6 +89,21 @@ export class Preloader extends Scene {
       "ui",
       getAssetUrl("UI/scalable+screen/Variations/Type+2/Screen__4.png"),
       getAssetUrl("data/dialoguebox.json")
+    );
+  }
+
+  private loadAudioAssets() {
+    this.load.audio(
+      "mainTheme",
+      getAssetUrl("audio/For-The-Loved-Ones[Copyright Free Music].m4a")
+    );
+    this.load.audio(
+      "menuSelect",
+      getAssetUrl("audio/ClassicUISFX-Short-High20.wav")
+    );
+    this.load.audio(
+      "menuConfirm",
+      getAssetUrl("audio/ClassicUISFX-Short-High21.wav")
     );
   }
 
@@ -129,7 +151,7 @@ export class Preloader extends Scene {
     // Load tilemap JSON
     this.load.tilemapTiledJSON(
       "awakening",
-      getAssetUrl("enviroment/tilemap/awakeningtile-map.json")
+      getAssetUrl("enviroment/tilemap/awakening-tilemap.json")
     );
 
     // Load tileset images

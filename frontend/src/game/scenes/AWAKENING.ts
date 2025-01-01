@@ -27,6 +27,7 @@ export class Platformer extends Scene {
     this.setupPhysics();
     this.setupParallaxEffects();
     this.createFogLayers();
+    this.generateParticleTexture();
     EventBus.emit("current-scene-ready", this);
   }
 
@@ -135,7 +136,7 @@ export class Platformer extends Scene {
   }
 
   private createFogLayers() {
-    const fogHeight = 200; // Reduced height for top-only fog
+    const fogHeight = 200;
     const mapWidth = this.map.widthInPixels;
 
     this.fogLayers["fogTop1"] = this.add
@@ -157,15 +158,34 @@ export class Platformer extends Scene {
       .setScale(2.0);
   }
 
+  private generateParticleTexture() {
+    const graphics = this.add.graphics();
+
+    // Draw a circle for the particle
+    graphics.fillStyle(0xffffff, 1); // White color with full opacity
+    graphics.fillCircle(4, 4, 4); // Center (4, 4), radius = 4
+
+    // Create a texture from the graphics
+    graphics.generateTexture("particle", 8, 8); // Key: "particle", size: 8x8
+    graphics.destroy(); // Cleanup the graphics object
+  }
+
   private createPlayer() {
     const groundY = 530;
     this.player = new Player(this, 100, groundY, "light");
     if (this.player.body) {
       const body = this.player.body as Phaser.Physics.Arcade.Body;
-      body.setSize(32, 50);
+      body.setSize(28, 51);
       body.setCollideWorldBounds(true);
 
-      this.healthBar = new HealthBar(this, 20, 20, "player_healthbar");
+      this.healthBar = new HealthBar(
+        this,
+        20,
+        20,
+        "player_healthbar",
+        "dark_bar",
+        "stamina_mana"
+      );
       this.healthBar.setPosition(40, 40);
     }
   }
@@ -173,11 +193,11 @@ export class Platformer extends Scene {
   private createDarklings(): void {
     this.darklings = this.physics.add.group({
       classType: Darkling,
-      runChildUpdate: true, // Ensures Darklings' update method is called
+      runChildUpdate: true,
     });
 
     // Define the number of darklings to spawn
-    const numberOfDarklings = 5; // Adjust this as needed
+    const numberOfDarklings = 5;
 
     // Get map dimensions
     const mapWidth = this.map.widthInPixels;
@@ -198,6 +218,9 @@ export class Platformer extends Scene {
     }
     if (this.layers["Platforms"]) {
       this.physics.add.collider(this.darklings, this.layers["Platforms"]);
+    }
+    if (this.layers["Gutter"]) {
+      this.physics.add.collider(this.darklings, this.layers["Gutter"]);
     }
   }
 

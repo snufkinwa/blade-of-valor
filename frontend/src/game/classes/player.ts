@@ -11,7 +11,7 @@ export class Player extends Physics.Arcade.Sprite {
   private jumpCount: number = 0;
   private maxJumps: number = 2;
   private currentForm: "light" | "dark";
-  private fallThreshold = 50;
+  private fallThreshold = 30;
   private attackQueue: string[] = [];
   private isProcessingAttacks = false;
 
@@ -73,7 +73,7 @@ export class Player extends Physics.Arcade.Sprite {
         frameRate: 10,
         repeat: 0,
       },
-      { key: "transformAfter", start: 148, end: 160, frameRate: 10, repeat: 0 },
+      { key: "transformAfter", start: 148, end: 159, frameRate: 10, repeat: 0 },
     ];
 
     animations.forEach(({ key, start, end, frameRate, repeat }) => {

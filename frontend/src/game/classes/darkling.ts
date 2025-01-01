@@ -21,7 +21,7 @@ export default class Darkling extends Physics.Arcade.Sprite {
 
     const body = this.body as Physics.Arcade.Body;
     if (body) {
-      body.setSize(32, 28);
+      body.setSize(15, 13);
       body.setCollideWorldBounds(true);
     }
 

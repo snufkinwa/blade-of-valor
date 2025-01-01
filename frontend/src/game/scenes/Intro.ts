@@ -47,24 +47,25 @@ export class Intro extends Scene {
 
     // Create panels for Elara and Architect
     this.elaraPanel = this.add
-      .nineslice(120, 100, "ui", "dialogueBox", 620, 200, 16, 16, 16, 16)
+      .nineslice(120, 100, "ui", "dialogueBox", 650, 200, 16, 16, 16, 16)
       .setOrigin(0, 0)
       .setAlpha(0);
 
     this.architectPanel = this.add
-      .nineslice(200, 380, "ui", "dialogueBox", 620, 200, 16, 16, 16, 16)
+      .nineslice(200, 380, "ui", "dialogueBox", 650, 200, 16, 16, 16, 16)
       .setOrigin(0, 0)
       .setAlpha(0);
 
     // Create portraits
     this.elaraPortrait = this.add
-      .image(centerX + 320, 200, "elara_portrait")
+      .image(920, 200, "elara_portrait")
       .setOrigin(0.5)
-      .setScale(0.5)
+      .setScale(0.6)
+      .setDepth(1)
       .setAlpha(0);
 
     this.architectPortrait = this.add
-      .sprite(centerX - 400, 480, "architect_portrait", "sprite72")
+      .sprite(140, 480, "architect_portrait", "sprite72")
       .setOrigin(0.5)
       .setScale(0.6)
       .setAlpha(0);
@@ -72,7 +73,7 @@ export class Intro extends Scene {
     // Create a circular mask
     const maskGraphics = this.add.graphics();
     maskGraphics.beginPath();
-    maskGraphics.arc(centerX - 400, 480, 60, 0, Math.PI * 2, false); // Circular mask with a radius of 75
+    maskGraphics.arc(140, 480, 60, 0, Math.PI * 2, false); // Circular mask with a radius of 75
     maskGraphics.fill();
 
     // Apply the mask to the architectPortrait

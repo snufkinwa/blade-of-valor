@@ -1,13 +1,14 @@
 import Phaser from "phaser";
 
 export default class HealthBar {
-  private container: Phaser.GameObjects.Container;
-  private background: Phaser.GameObjects.Sprite;
-  private healthFill: Phaser.GameObjects.Sprite;
-  private bossBar: Phaser.GameObjects.Sprite;
-  private bossFill: Phaser.GameObjects.Sprite;
-  private value: number = 100;
-  private isVisible: boolean = false;
+  protected container: Phaser.GameObjects.Container;
+  protected background: Phaser.GameObjects.Sprite;
+  protected healthFill: Phaser.GameObjects.TileSprite;
+  protected healthStamina: Phaser.GameObjects.TileSprite;
+  protected crystal: Phaser.GameObjects.Sprite;
+  protected value: number = 100;
+  protected isVisible: boolean = false;
+  protected currentForm: "light" | "dark" = "light";
 
   constructor(
     scene: Phaser.Scene,
@@ -15,38 +16,38 @@ export default class HealthBar {
     y: number,
     healthTexture: string,
     healthFillTexture: string,
-    bossTexture: string,
-    bossFillTexture: string
+    healthStamina: string
   ) {
     this.container = scene.add.container(x, y);
 
-    // Health bar background and fill
     this.background = scene.add.sprite(0, 0, healthTexture);
     this.background.setScale(1.5);
-    this.healthFill = scene.add.sprite(0, 0, healthFillTexture);
-    this.background.setOrigin(0, 0);
-    this.healthFill.setOrigin(0, 0);
+    this.background.setOrigin(0, 0).setDepth(5);
 
-    // Boss bar background and fill
-    this.bossBar = scene.add.sprite(0, 0, bossTexture);
-    this.bossFill = scene.add.sprite(0, 0, bossFillTexture);
-    this.bossBar.setOrigin(0, 0);
-    this.bossFill.setOrigin(0, 0);
+    this.healthFill = scene.add.tileSprite(55, 33, 57, 3, healthFillTexture);
+    this.healthFill.setOrigin(0, 0).setScale(1.5);
 
-    // Set visibility
-    this.bossBar.setVisible(false);
-    this.bossFill.setVisible(false);
+    this.healthStamina = scene.add.tileSprite(54, 21, 57, 3, healthStamina);
+    this.healthStamina.setOrigin(0, 0).setScale(1.5).setDepth(-1);
 
-    // Add all elements to container
+    this.crystal = scene.add.sprite(30, 30, "crystal-light");
+    this.crystal.setScale(2.2);
+
     this.container.add([
-      this.background,
       this.healthFill,
-      this.bossBar,
-      this.bossFill,
+      this.healthStamina,
+      this.crystal,
+      this.background,
     ]);
-    this.container.setDepth(1000);
 
+    this.container.setDepth(1000);
     this.updateBar();
+  }
+
+  setForm(form: "light" | "dark") {
+    this.currentForm = form;
+    const textureKey = form === "light" ? "crystal-light" : "crystal-dark";
+    this.crystal.setTexture(textureKey);
   }
 
   setValue(value: number) {
@@ -54,42 +55,17 @@ export default class HealthBar {
     this.updateBar();
   }
 
-  private updateBar() {
+  protected updateBar() {
     const fillWidth = this.value / 100;
     this.healthFill.setScale(fillWidth, 1);
-    this.bossFill.setScale(fillWidth, 1);
   }
 
   setPosition(x: number, y: number) {
     this.container.setPosition(x, y);
   }
 
-  update(
-    camera: Phaser.Cameras.Scene2D.Camera,
-    knight?: Phaser.GameObjects.Sprite
-  ) {
+  update(camera: Phaser.Cameras.Scene2D.Camera) {
     this.setPosition(camera.scrollX + 20, camera.scrollY + 20);
-
-    if (knight) {
-      const knightVisible = camera.worldView.contains(knight.x, knight.y);
-      if (knightVisible && !this.isVisible) {
-        this.showBossBar();
-      } else if (!knightVisible && this.isVisible) {
-        this.hideBossBar();
-      }
-    }
-  }
-
-  private showBossBar() {
-    this.isVisible = true;
-    this.bossBar.setVisible(true);
-    this.bossFill.setVisible(true);
-  }
-
-  private hideBossBar() {
-    this.isVisible = false;
-    this.bossBar.setVisible(false);
-    this.bossFill.setVisible(false);
   }
 
   destroy() {

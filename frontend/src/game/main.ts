@@ -6,6 +6,7 @@ import { Corruption as Middlegame } from "./scenes/CORRUPTION";
 import { FinalBattle as Endgame } from "./scenes/FinalBattle";
 import { MainMenu } from "./scenes/MainMenu";
 import { Tutorial } from "./scenes/Tutorial";
+import { PauseMenu } from "./scenes/PauseMenu";
 import { AUTO, Game } from "phaser";
 import { Preloader } from "./scenes/Preloader";
 
@@ -27,6 +28,7 @@ const config: Phaser.Types.Core.GameConfig = {
     Endgame,
     GameOver,
     Tutorial,
+    PauseMenu,
   ],
   physics: {
     default: "arcade",
@@ -37,6 +39,9 @@ const config: Phaser.Types.Core.GameConfig = {
       },
       debug: false,
     },
+  },
+  audio: {
+    disableWebAudio: false,
   },
 };
 

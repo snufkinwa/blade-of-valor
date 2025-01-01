@@ -2,6 +2,7 @@ import { forwardRef, useEffect, useLayoutEffect, useRef } from "react";
 import StartGame from "./main";
 import { EventBus } from "./EventBus";
 import WebSocketService from "./WebSocketService";
+import { handleGameInput, setCurrentScene } from "./command";
 
 export interface IRefPhaserGame {
   game: Phaser.Game | null;
@@ -39,96 +40,36 @@ export const PhaserGame = forwardRef<IRefPhaserGame, IProps>(
     }, [ref]);
 
     useEffect(() => {
-      EventBus.on("current-scene-ready", (scene_instance: Phaser.Scene) => {
+      const handleSceneChange = (scene_instance: Phaser.Scene) => {
         sceneRef.current = scene_instance;
+        setCurrentScene(scene_instance.scene.key);
 
-        EventBus.on("server-response", (data: any) => {
-          if (data.game_stage) {
-            EventBus.emit("game-stage-update", data.game_stage);
-          }
-          if (data.darkling_wave) {
-            EventBus.emit("darkling-wave", data.darkling_wave);
-          }
-        });
-
-        if (currentActiveScene && typeof currentActiveScene === "function") {
-          currentActiveScene(scene_instance);
-        }
+        if (currentActiveScene) currentActiveScene(scene_instance);
         if (typeof ref === "function") {
           ref({ game: game.current, scene: scene_instance });
         } else if (ref) {
-          ref.current = {
-            game: game.current,
-            scene: scene_instance,
-          };
+          ref.current = { game: game.current, scene: scene_instance };
         }
+      };
+
+      EventBus.on("current-scene-ready", handleSceneChange);
+      EventBus.on("server-response", (data: any) => {
+        if (data.game_stage)
+          EventBus.emit("game-stage-update", data.game_stage);
+        if (data.darkling_wave)
+          EventBus.emit("darkling-wave", data.darkling_wave);
       });
 
-      const handleKeyDown = (event: KeyboardEvent) => {
-        // Menu Controls
-        if (event.key === "Enter") {
-          EventBus.emit("enter-key-pressed");
-        }
-        if (event.key === "ArrowUp") {
-          EventBus.emit("arrow-up-pressed");
-        }
-        if (event.key === "ArrowDown") {
-          EventBus.emit("arrow-down-pressed");
-        }
-
-        // Movement Controls
-        if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
-          EventBus.emit("run-pressed", event.key);
-        }
-        if (event.key === " ") {
-          // Spacebar
-          EventBus.emit("jump-pressed");
-        }
-        if (event.key === "q" || event.key === "Q") {
-          EventBus.emit("dash-pressed");
-        }
-        if (event.key === "r" || event.key === "R") {
-          EventBus.emit("roll-pressed");
-        }
-
-        // Combat Controls
-        if (event.key === "z" || event.key === "Z") {
-          EventBus.emit("attack-1-pressed");
-        }
-        if (event.key === "x" || event.key === "X") {
-          EventBus.emit("attack-2-pressed");
-        }
-        if (event.key === "c" || event.key === "C") {
-          EventBus.emit("attack-3-pressed");
-        }
-
-        // Transform Controls
-        if (event.key === "t" || event.key === "T") {
-          EventBus.emit("transform-pressed");
-        }
-      };
-
-      const handleKeyUp = (event: KeyboardEvent) => {
-        // Movement Controls Release
-        if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
-          EventBus.emit("run-released", event.key);
-        }
-        if (event.key === " ") {
-          EventBus.emit("jump-released");
-        }
-        if (event.key === "q" || event.key === "Q") {
-          EventBus.emit("dash-released");
-        }
-        if (event.key === "r" || event.key === "R") {
-          EventBus.emit("recover-balance");
-        }
-      };
+      const handleKeyDown = (event: KeyboardEvent) => handleGameInput(event);
+      const handleKeyUp = (event: KeyboardEvent) =>
+        handleGameInput(event, true);
 
       window.addEventListener("keydown", handleKeyDown);
       window.addEventListener("keyup", handleKeyUp);
 
       return () => {
-        EventBus.removeListener("current-scene-ready");
+        EventBus.removeListener("current-scene-ready", handleSceneChange);
+        EventBus.removeListener("server-response");
         window.removeEventListener("keydown", handleKeyDown);
         window.removeEventListener("keyup", handleKeyUp);
       };

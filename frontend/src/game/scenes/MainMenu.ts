@@ -5,6 +5,9 @@ export class MainMenu extends Scene {
   background: GameObjects.Image;
   duelimg: GameObjects.Image;
   logo: GameObjects.Image;
+  music: Phaser.Sound.BaseSound;
+  selectSound: Phaser.Sound.BaseSound;
+  confirmSound: Phaser.Sound.BaseSound;
   selectionHighlight: GameObjects.Image;
   seperator: GameObjects.Image;
   menuOptions: GameObjects.Text[];
@@ -29,6 +32,16 @@ export class MainMenu extends Scene {
       .image(centerX, 645, "seperator")
       .setScale(1.0)
       .setFlipY(true);
+    if (!this.sound.get("mainTheme")) {
+      this.music = this.sound.add("mainTheme", {
+        volume: 0.3,
+        loop: true,
+      });
+      this.music.play();
+    }
+
+    this.selectSound = this.sound.add("menuSelect", { volume: 0.5 });
+    this.confirmSound = this.sound.add("menuConfirm", { volume: 0.4 });
 
     // Selection highlight background
     this.selectionHighlight = this.add
@@ -85,6 +98,9 @@ export class MainMenu extends Scene {
 
   changeSelection(direction: number) {
     // Update current selection
+    if (this.selectSound) {
+      this.selectSound.play();
+    }
     this.currentSelection =
       (this.currentSelection + direction + this.menuOptions.length) %
       this.menuOptions.length;
@@ -105,29 +121,58 @@ export class MainMenu extends Scene {
   }
 
   handleEnterKey() {
-    console.log("Enter key pressed");
-    this.cameras.main.fadeOut(500, 0, 0, 0); // Fade out effect
-    this.cameras.main.once("camerafadeoutcomplete", () => {
-      switch (this.currentSelection) {
-        case 0: // New Game
-          this.scene.start("Intro");
-          break;
-        case 1: // Continue
-          // TODO: Add continue game logic
-          this.scene.start("Platformer"); // Temporary
-          break;
-        case 2: // Tutorial
-          this.scene.start("Tutorial");
-          break;
-      }
-    });
+    if (this.confirmSound) {
+      this.confirmSound.play();
+    }
+    switch (this.currentSelection) {
+      case 0: // New Game
+      case 1: // Continue
+        this.cameras.main.fadeOut(500, 0, 0, 0);
+        this.cameras.main.once("camerafadeoutcomplete", () => {
+          this.cleanupAudio();
+          this.scene.start(
+            this.currentSelection === 0 ? "Intro" : "Platformer"
+          );
+        });
+        break;
+      case 2: // Tutorial
+        if (this.music) {
+          this.music.pause();
+        }
+        this.scene.pause();
+        this.scene.launch("Tutorial", {
+          parentScene: this,
+          onClose: () => {
+            if (this.music) {
+              this.music.resume();
+            }
+          },
+        });
+        break;
+    }
+  }
+
+  private cleanupAudio() {
+    if (this.music) {
+      this.music.stop();
+      this.music.destroy();
+    }
+    if (this.selectSound) {
+      this.selectSound.destroy();
+    }
+    if (this.confirmSound) {
+      this.confirmSound.destroy();
+    }
+    this.sound.removeAll();
   }
 
   shutdown() {
+    this.cleanupAudio();
     EventBus.removeListener("enter-key-pressed", this.handleEnterKey);
     EventBus.removeListener("arrow-up-pressed", () => this.changeSelection(-1));
     EventBus.removeListener("arrow-down-pressed", () =>
       this.changeSelection(1)
     );
+    EventBus.removeAllListeners();
   }
 }
