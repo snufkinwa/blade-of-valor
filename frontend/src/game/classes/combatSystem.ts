@@ -2,7 +2,7 @@ import { Scene } from "phaser";
 import { Knight } from "../classes/knight";
 import Darkling from "../classes/darkling";
 import { EventBus } from "../EventBus";
-import HealthBar from "./HealthBar";
+import { BossHealthBar } from "./HealthBar";
 
 export class CombatSystem {
   private scene: Scene;
@@ -11,7 +11,7 @@ export class CombatSystem {
   private hitAnimationThreshold: number = 10;
   private isInvulnerable: boolean = false;
   private invulnerabilityDuration: number = 1000;
-  private healthBar: HealthBar;
+  private bossBar: BossHealthBar;
   private corruptionLevel: number = 0;
   private maxCorruption: number = 100;
   private attackQueue: string[] = [];
@@ -21,13 +21,12 @@ export class CombatSystem {
     this.scene = scene;
     this.knight = new Knight(scene, x, y);
     this.setupEventListeners();
-    this.healthBar = new HealthBar(
+    this.bossBar = new BossHealthBar(
       scene,
-      50,
-      50,
-      "health-bar-bg",
-      "health-bar-fill",
-      "boss-bar-bg"
+      100,
+      20,
+      "bossTexture",
+      "bossFillTexture"
     );
   }
 
@@ -159,7 +158,7 @@ export class CombatSystem {
       this.knight.takeDamage();
     }
 
-    this.healthBar.setValue(this.knight.hp);
+    this.bossBar.setValue(this.knight.hp);
   }
 
   private applyDamage(damage: number): void {
@@ -208,7 +207,7 @@ export class CombatSystem {
   private handleCorruption(): void {
     // Reset health but maintain corruption
     if (this.knight.hp) this.knight.hp = 100;
-    this.healthBar.setValue(100);
+    this.bossBar.setValue(100);
 
     // Emit event for game state changes
     EventBus.emit("player-corrupted");
@@ -236,7 +235,7 @@ export class CombatSystem {
     EventBus.removeListener("jump-pressed");
 
     this.darklings.forEach((darkling) => darkling.destroy());
-    this.healthBar.destroy();
+    this.bossBar.destroy();
     this.knight.destroy();
   }
 }

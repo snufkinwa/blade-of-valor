@@ -1,14 +1,45 @@
 import Phaser from "phaser";
 
-export default class HealthBar {
+// Base health bar class with common functionality
+class BaseHealthBar {
   protected container: Phaser.GameObjects.Container;
-  protected background: Phaser.GameObjects.Sprite;
-  protected healthFill: Phaser.GameObjects.TileSprite;
-  protected healthStamina: Phaser.GameObjects.TileSprite;
-  protected crystal: Phaser.GameObjects.Sprite;
   protected value: number = 100;
   protected isVisible: boolean = false;
-  protected currentForm: "light" | "dark" = "light";
+
+  constructor(protected scene: Phaser.Scene, x: number, y: number) {
+    this.container = scene.add.container(x, y);
+    this.container.setDepth(1000);
+  }
+
+  setValue(value: number) {
+    this.value = Phaser.Math.Clamp(value, 0, 100);
+    this.updateBar();
+  }
+
+  setPosition(x: number, y: number) {
+    this.container.setPosition(x, y);
+  }
+
+  protected updateBar() {
+    // Implemented by child classes
+  }
+
+  update(camera: Phaser.Cameras.Scene2D.Camera) {
+    this.setPosition(camera.scrollX + 20, camera.scrollY + 20);
+  }
+
+  destroy() {
+    this.container.destroy();
+  }
+}
+
+// Player health bar with stamina
+export class PlayerHealthBar extends BaseHealthBar {
+  private background: Phaser.GameObjects.Sprite;
+  private healthFill: Phaser.GameObjects.TileSprite;
+  private healthStamina: Phaser.GameObjects.TileSprite;
+  private crystal: Phaser.GameObjects.Sprite;
+  private currentForm: "light" | "dark" = "light";
 
   constructor(
     scene: Phaser.Scene,
@@ -18,7 +49,7 @@ export default class HealthBar {
     healthFillTexture: string,
     healthStamina: string
   ) {
-    this.container = scene.add.container(x, y);
+    super(scene, x, y);
 
     this.background = scene.add.sprite(0, 0, healthTexture);
     this.background.setScale(1.5);
@@ -40,7 +71,6 @@ export default class HealthBar {
       this.background,
     ]);
 
-    this.container.setDepth(1000);
     this.updateBar();
   }
 
@@ -50,25 +80,79 @@ export default class HealthBar {
     this.crystal.setTexture(textureKey);
   }
 
-  setValue(value: number) {
-    this.value = Phaser.Math.Clamp(value, 0, 100);
+  protected updateBar() {
+    const fillWidth = this.value / 100;
+    this.healthFill.setScale(fillWidth * 1.5, 1.5);
+  }
+
+  destroy() {
+    this.background.destroy();
+    this.healthFill.destroy();
+    this.healthStamina.destroy();
+    this.crystal.destroy();
+    super.destroy();
+  }
+}
+
+// Boss health bar without stamina
+export class BossHealthBar extends BaseHealthBar {
+  private bossBar: Phaser.GameObjects.Sprite;
+  private bossFill: Phaser.GameObjects.Sprite;
+
+  constructor(
+    scene: Phaser.Scene,
+    x: number,
+    y: number,
+    bossTexture: string,
+    bossFillTexture: string
+  ) {
+    super(scene, x, y);
+
+    this.bossBar = scene.add.sprite(0, 0, bossTexture);
+    this.bossFill = scene.add.sprite(0, 0, bossFillTexture);
+
+    this.bossBar.setOrigin(0, 0);
+    this.bossFill.setOrigin(0, 0);
+
+    this.container.add([this.bossBar, this.bossFill]);
     this.updateBar();
+  }
+
+  update(
+    camera: Phaser.Cameras.Scene2D.Camera,
+    knight?: Phaser.GameObjects.Sprite
+  ) {
+    super.update(camera);
+    if (knight) {
+      const knightVisible = camera.worldView.contains(knight.x, knight.y);
+      if (knightVisible && !this.isVisible) {
+        this.showBossBar();
+      } else if (!knightVisible && this.isVisible) {
+        this.hideBossBar();
+      }
+    }
+  }
+
+  private showBossBar() {
+    this.isVisible = true;
+    this.bossBar.setVisible(true);
+    this.bossFill.setVisible(true);
+  }
+
+  private hideBossBar() {
+    this.isVisible = false;
+    this.bossBar.setVisible(false);
+    this.bossFill.setVisible(false);
   }
 
   protected updateBar() {
     const fillWidth = this.value / 100;
-    this.healthFill.setScale(fillWidth, 1);
-  }
-
-  setPosition(x: number, y: number) {
-    this.container.setPosition(x, y);
-  }
-
-  update(camera: Phaser.Cameras.Scene2D.Camera) {
-    this.setPosition(camera.scrollX + 20, camera.scrollY + 20);
+    this.bossFill.setScale(fillWidth, 1);
   }
 
   destroy() {
-    this.container.destroy();
+    this.bossBar.destroy();
+    this.bossFill.destroy();
+    super.destroy();
   }
 }
