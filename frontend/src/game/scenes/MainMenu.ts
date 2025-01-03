@@ -92,6 +92,9 @@ export class MainMenu extends Scene {
     EventBus.on("arrow-up-pressed", () => this.changeSelection(-1));
     EventBus.on("arrow-down-pressed", () => this.changeSelection(1));
     EventBus.on("enter-key-pressed", this.handleEnterKey, this);
+    EventBus.on("esc-key-pressed", () => {
+      this.scene.start("MainMenu");
+    });
 
     EventBus.emit("current-scene-ready", this);
   }
@@ -126,13 +129,22 @@ export class MainMenu extends Scene {
     }
     switch (this.currentSelection) {
       case 0: // New Game
+        this.cameras.main.fadeOut(500, 0, 0, 0);
+        this.cameras.main.once("camerafadeoutcomplete", () => {
+          this.cleanupAudio();
+          this.scene.start("Intro", {
+            isNewGame: true,
+            onIntroComplete: () => {
+              this.scene.start("Platformer", { isNewGame: true });
+            },
+          });
+        });
+        break;
       case 1: // Continue
         this.cameras.main.fadeOut(500, 0, 0, 0);
         this.cameras.main.once("camerafadeoutcomplete", () => {
           this.cleanupAudio();
-          this.scene.start(
-            this.currentSelection === 0 ? "Intro" : "Platformer"
-          );
+          this.scene.start("Platformer", { isNewGame: false });
         });
         break;
       case 2: // Tutorial
@@ -145,6 +157,7 @@ export class MainMenu extends Scene {
           onClose: () => {
             if (this.music) {
               this.music.resume();
+              this.scene.resume();
             }
           },
         });

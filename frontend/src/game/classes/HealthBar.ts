@@ -55,7 +55,7 @@ export class PlayerHealthBar extends BaseHealthBar {
     this.background.setScale(1.5);
     this.background.setOrigin(0, 0).setDepth(5);
 
-    this.healthFill = scene.add.tileSprite(55, 33, 57, 3, healthFillTexture);
+    this.healthFill = scene.add.tileSprite(55, 33, 43, 3, healthFillTexture);
     this.healthFill.setOrigin(0, 0).setScale(1.5);
 
     this.healthStamina = scene.add.tileSprite(54, 21, 57, 3, healthStamina);

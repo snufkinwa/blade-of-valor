@@ -45,13 +45,13 @@ export class Tutorial extends Scene {
       .nineslice(0, 0, "ui", "dialogueBox", 600, 500, 16, 16, 16, 16)
       .setOrigin(0.5);
 
-    const title = this.add
-      .text(0, -190, "Tutorial", {
-        fontSize: "24px",
-        fontFamily: "Public Pixel",
-        color: "#ffffff",
-      })
-      .setOrigin(0.5);
+    // const title = this.add
+    //   .text(0, -190, "Tutorial", {
+    //     fontSize: "24px",
+    //     fontFamily: "Public Pixel",
+    //     color: "#ffffff",
+    //   })
+    //   .setOrigin(0.5);
 
     const content = this.add
       .text(
@@ -85,7 +85,7 @@ export class Tutorial extends Scene {
       .setOrigin(0.5);
 
     this.tutorialPanel.add([
-      title,
+      // title,
       this.seperator,
       content,
       this.closeButton,

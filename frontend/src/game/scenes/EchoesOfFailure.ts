@@ -1,4 +1,8 @@
 import { EventBus } from "../EventBus";
 import { GameObjects, Scene } from "phaser";
 
-export class EchoesOfFailure extends Scene {}
+export class EchoesOfFailure extends Scene {
+  constructor() {
+    super("EchoesOfFailure");
+  }
+}

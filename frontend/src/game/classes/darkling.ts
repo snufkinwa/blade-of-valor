@@ -1,4 +1,5 @@
 import { Scene, Physics, GameObjects } from "phaser";
+import { EventBus } from "../EventBus";
 
 export default class Darkling extends Physics.Arcade.Sprite {
   private static readonly WAVE_DISTANCE = 20;
@@ -12,7 +13,17 @@ export default class Darkling extends Physics.Arcade.Sprite {
     isDisappearing: false,
   };
 
+  // AI properties
+  private player: Phaser.GameObjects.Sprite | null = null;
+  private detectionRange: number = 300;
+  private attackRange: number = 50;
+  private lastAttackTime: number = 0;
+  private attackCooldown: number = 2000; // 2 seconds between attacks
+  private chaseSpeed: number = 100;
+  private aiState: "wave" | "idle" | "chase" | "attack" = "wave";
   private waveIndex?: number;
+  public isAttacking: boolean = false;
+  private onAttackComplete: (() => void) | null = null;
 
   constructor(scene: Scene, x: number, y: number) {
     super(scene, x, y, "darkling");
@@ -27,6 +38,10 @@ export default class Darkling extends Physics.Arcade.Sprite {
 
     this.initAnimations();
     this.play("darkling-idle");
+  }
+
+  public setPlayer(player: Phaser.GameObjects.Sprite) {
+    this.player = player;
   }
 
   private initAnimations(): void {
@@ -96,7 +111,7 @@ export default class Darkling extends Physics.Arcade.Sprite {
   walk(direction: "left" | "right"): void {
     if (this.moveState.isAttacking || this.moveState.isHurt) return;
 
-    const velocity = direction === "left" ? -100 : 100;
+    const velocity = direction === "left" ? -this.chaseSpeed : this.chaseSpeed;
     this.setVelocityX(velocity);
     this.setFlipX(direction === "left");
 
@@ -106,19 +121,21 @@ export default class Darkling extends Physics.Arcade.Sprite {
     }
   }
 
-  attack(): void {
-    if (this.moveState.isAttacking || this.moveState.isHurt) return;
+  public attack(onComplete?: () => void) {
+    if (this.isAttacking) return;
 
-    this.moveState.isAttacking = true;
-    this.setVelocityX(0);
+    this.isAttacking = true;
+    this.onAttackComplete = onComplete || null;
 
-    this.play("darkling-attack", true).once(
-      Phaser.Animations.Events.ANIMATION_COMPLETE,
-      () => {
-        this.moveState.isAttacking = false;
-        this.play("darkling-idle", true);
+    // Play attack animation
+    this.play("darkling-attack").once("animationcomplete", () => {
+      this.isAttacking = false;
+      this.play("darkling-idle");
+
+      if (this.onAttackComplete) {
+        this.onAttackComplete();
       }
-    );
+    });
   }
 
   hurt(): void {
@@ -200,18 +217,78 @@ export default class Darkling extends Physics.Arcade.Sprite {
 
   update(): void {
     const body = this.body as Physics.Arcade.Body;
-    if (!body) return;
+
+    if (!this.isAttacking) {
+      // Regular movement or idle behavior when not attacking
+      body.setVelocity(0);
+    }
+
+    if (!body || this.moveState.isHurt || this.moveState.isDisappearing) return;
 
     if (this.waveIndex !== undefined) {
-      const baseSpeed = -150;
-      body.setVelocityX(baseSpeed);
-
-      const oscillation = Math.sin(this.scene.time.now / 500) * 2;
-      body.setVelocityY(oscillation);
+      this.handleWaveMovement(body);
+    } else if (this.player) {
+      this.handleAIBehavior();
     }
 
     if (this.moveState.isWalking && body.velocity.x === 0) {
       this.stop();
+    }
+  }
+
+  private handleWaveMovement(body: Physics.Arcade.Body): void {
+    const baseSpeed = -150;
+    body.setVelocityX(baseSpeed);
+
+    const oscillation = Math.sin(this.scene.time.now / 500) * 2;
+    body.setVelocityY(oscillation);
+
+    // Check if darkling has moved far enough into the scene to start AI behavior
+    if (this.x < this.scene.cameras.main.width - 100) {
+      this.waveIndex = undefined;
+      this.aiState = "idle";
+      body.setCollideWorldBounds(true);
+      body.setAllowGravity(true);
+    }
+  }
+
+  private handleAIBehavior(): void {
+    if (!this.player || this.moveState.isAttacking) return;
+
+    const distance = Phaser.Math.Distance.Between(
+      this.x,
+      this.y,
+      this.player.x,
+      this.player.y
+    );
+
+    if (distance <= this.attackRange) {
+      this.handleAttack();
+    } else if (distance <= this.detectionRange) {
+      this.handleChase();
+    } else {
+      this.stop();
+    }
+  }
+
+  private handleChase(): void {
+    if (!this.player || this.moveState.isAttacking) return;
+
+    const direction = this.player.x < this.x ? "left" : "right";
+    this.walk(direction);
+  }
+
+  private handleAttack(): void {
+    const currentTime = Date.now();
+    if (currentTime - this.lastAttackTime >= this.attackCooldown) {
+      this.lastAttackTime = currentTime;
+      this.attack();
+
+      // Emit attack event through EventBus
+      EventBus.emit("darkling-attack", {
+        damage: 10,
+        corruption: 5,
+      });
     }
   }
 }

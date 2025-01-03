@@ -13,6 +13,8 @@ export class Intro extends Scene {
   private elaraPortrait: GameObjects.Image;
   private architectPortrait: GameObjects.Sprite;
   private isAnimatingPanel: boolean;
+  private isNewGame: boolean;
+  private onIntroComplete: Function | null;
 
   constructor() {
     super("Intro");
@@ -20,8 +22,18 @@ export class Intro extends Scene {
     this.isAnimatingPanel = false;
   }
 
-  create() {
-    const centerX = this.cameras.main.centerX;
+  create(data: { isNewGame: boolean; onIntroComplete: null }) {
+    this.isNewGame = data.isNewGame || false;
+    this.onIntroComplete = data.onIntroComplete || null;
+
+    // Play intro animation or sequence
+    this.time.delayedCall(5000, () => {
+      if (this.onIntroComplete) {
+        this.onIntroComplete();
+      } else {
+        this.scene.start("Platformer", { isNewGame: this.isNewGame });
+      }
+    });
 
     EventBus.removeAllListeners("enter-key-pressed");
 
@@ -96,6 +108,19 @@ export class Intro extends Scene {
 
     this.showDialoguePanel(() => {
       this.displayNextDialogue();
+    });
+  }
+
+  startIntroSequence() {
+    // Simulate the intro sequence
+    this.time.delayedCall(30000, () => {
+      if (this.onIntroComplete) {
+        // Notify parent scene of completion
+        this.onIntroComplete({ isNewGame: this.isNewGame });
+      } else {
+        // Default to Platformer scene if no callback is provided
+        this.scene.start("Platformer", { isNewGame: this.isNewGame });
+      }
     });
   }
 

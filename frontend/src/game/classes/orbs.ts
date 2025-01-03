@@ -1,15 +1,12 @@
-import { Scene, Physics, GameObjects } from "phaser";
+import { Scene, Physics } from "phaser";
 import { EventBus } from "../EventBus";
 
 export class Orb extends Physics.Arcade.Sprite {
-  constructor(
-    scene: Scene,
-    x: number,
-    y: number,
-    type: "light" | "collect" | "dark"
-  ) {
-    const textureKey = type === "collect" ? "collectOrbs" : "Orbs";
-    super(scene, x, y, textureKey);
+  private isLarge: boolean;
+
+  constructor(scene: Scene, x: number, y: number, isLarge: boolean = false) {
+    super(scene, x, y, "Orbs");
+    this.isLarge = isLarge;
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
@@ -21,43 +18,50 @@ export class Orb extends Physics.Arcade.Sprite {
     body.setGravityY(300);
     body.setFriction(0);
 
-    this.initAnimations(type);
-    this.play(`${type}-orb-float`);
+    this.initAnimation();
+    this.play(this.isLarge ? "large-orb-float" : "small-orb-float");
   }
 
-  private initAnimations(type: string): void {
-    if (!this.scene.anims.exists(`${type}-orb-float`)) {
-      const configs = {
-        light: { start: 1, end: 7, frameRate: 10 },
-        collect: { start: 24, end: 39, frameRate: 12 },
-        dark: { start: 1, end: 7, frameRate: 10, tint: 0x4a0080 },
-      };
-
-      const config = configs[type as keyof typeof configs];
+  private initAnimation(): void {
+    if (!this.scene.anims.exists("large-orb-float")) {
       this.scene.anims.create({
-        key: `${type}-orb-float`,
-        frames: this.scene.anims.generateFrameNames(
-          type === "collect" ? "collectOrbs" : "Orbs",
-          {
-            start: config.start,
-            end: config.end,
-            prefix: "sprite",
-          }
-        ),
-        frameRate: config.frameRate,
+        key: "large-orb-float",
+        frames: this.scene.anims.generateFrameNames("Orbs", {
+          start: 24,
+          end: 31,
+          prefix: "sprite",
+        }),
+        frameRate: 10,
+        repeat: -1,
+      });
+    }
+
+    if (!this.scene.anims.exists("small-orb-float")) {
+      this.scene.anims.create({
+        key: "small-orb-float",
+        frames: this.scene.anims.generateFrameNames("Orbs", {
+          start: 32,
+          end: 39,
+          prefix: "sprite",
+        }),
+        frameRate: 10,
         repeat: -1,
       });
     }
   }
 
   scatter(): void {
-    const angle = Phaser.Math.Between(0, 360);
-    const speed = Phaser.Math.Between(100, 200);
-    const vx = Math.cos(angle) * speed;
-    const vy = Math.sin(angle) * speed - 200; // Extra upward boost
+    const angle = Phaser.Math.Between(-30, 30);
+    const speed = Phaser.Math.Between(150, 250);
+    const vx = Math.cos(Phaser.Math.DegToRad(angle)) * speed;
+    const vy = Math.sin(Phaser.Math.DegToRad(angle)) * speed - 300;
 
     const body = this.body as Physics.Arcade.Body;
     body.setVelocity(vx, vy);
+  }
+
+  isLargeOrb(): boolean {
+    return this.isLarge;
   }
 }
 
@@ -79,21 +83,48 @@ export class OrbSystem {
       .setOrigin(0, 0)
       .setDisplaySize(this.scene.cameras.main.width, 20)
       .refreshBody();
-    ground.setAlpha(0); // Invisible ground
 
+    ground.setAlpha(0);
     this.scene.physics.add.collider(this.orbs, platforms);
   }
 
   spawnOrbs(
     x: number,
     y: number,
-    count: number,
-    type: "light" | "collect" | "dark"
+    config: { large?: number; small?: number }
   ): void {
-    for (let i = 0; i < count; i++) {
-      const orb = new Orb(this.scene, x, y, type);
-      this.orbs.push(orb);
-      orb.scatter();
+    if (config.large) {
+      for (let i = 0; i < config.large; i++) {
+        const orb = new Orb(
+          this.scene,
+          x + Phaser.Math.Between(-10, 10),
+          y + Phaser.Math.Between(-10, 10),
+          true
+        );
+        this.orbs.push(orb);
+        orb.scatter();
+      }
+    }
+
+    if (config.small) {
+      for (let i = 0; i < config.small; i++) {
+        const orb = new Orb(
+          this.scene,
+          x + Phaser.Math.Between(-10, 10),
+          y + Phaser.Math.Between(-10, 10),
+          false
+        );
+        this.orbs.push(orb);
+        orb.scatter();
+      }
+    }
+  }
+
+  spawnOrbsFromDarkling(x: number, y: number, isElite: boolean = false): void {
+    if (isElite) {
+      this.spawnOrbs(x, y, { large: 2, small: 1 });
+    } else {
+      this.spawnOrbs(x, y, { large: 1, small: 1 });
     }
   }
 
@@ -108,9 +139,8 @@ export class OrbSystem {
     const index = this.orbs.indexOf(orb);
     if (index > -1) {
       this.orbs.splice(index, 1);
-      this.increaseLightLevel(10);
+      this.increaseLightLevel(orb.isLargeOrb() ? 15 : 10);
 
-      // Collection effect
       this.scene.tweens.add({
         targets: orb,
         scale: { from: 1, to: 0 },
@@ -126,10 +156,6 @@ export class OrbSystem {
   private increaseLightLevel(amount: number): void {
     this.lightLevel = Math.min(this.maxLight, this.lightLevel + amount);
     EventBus.emit("light-level-change", this.lightLevel);
-  }
-
-  update(): void {
-    // Add any update logic for orbs here
   }
 
   cleanup(): void {

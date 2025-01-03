@@ -2,7 +2,7 @@ import { Scene, GameObjects, Cameras } from "phaser";
 import { EventBus } from "../EventBus";
 import { Player } from "../classes/player";
 import Darkling from "../classes/darkling";
-import HealthBar from "../classes/HealthBar";
+import { PlayerHealthBar } from "../classes/HealthBar";
 
 export class Platformer extends Scene {
   private map!: Phaser.Tilemaps.Tilemap;
@@ -11,11 +11,19 @@ export class Platformer extends Scene {
   private fogLayers: Record<string, GameObjects.TileSprite> = {};
   private player!: Player;
   private darklings!: Phaser.Physics.Arcade.Group;
-  private healthBar!: HealthBar;
+  private playerHealthBar!: PlayerHealthBar;
+  private isNewGame: boolean;
+  private introDarkling: Darkling | null = null;
+  private introTriggered: boolean = false;
   camera!: Cameras.Scene2D.Camera;
 
   constructor() {
     super("Platformer");
+  }
+
+  init(data: { isNewGame?: boolean }) {
+    this.isNewGame = data.isNewGame ?? false;
+    console.log("Init called, isNewGame:", this.isNewGame);
   }
 
   create() {
@@ -24,6 +32,7 @@ export class Platformer extends Scene {
     this.createBackgroundLayers();
     this.createPlayer();
     this.createDarklings();
+    //this.setupCombatSystem;
     this.setupPhysics();
     this.setupParallaxEffects();
     this.createFogLayers();
@@ -178,7 +187,7 @@ export class Platformer extends Scene {
       body.setSize(28, 51);
       body.setCollideWorldBounds(true);
 
-      this.healthBar = new HealthBar(
+      this.playerHealthBar = new PlayerHealthBar(
         this,
         20,
         20,
@@ -186,7 +195,7 @@ export class Platformer extends Scene {
         "dark_bar",
         "stamina_mana"
       );
-      this.healthBar.setPosition(40, 40);
+      this.playerHealthBar.setPosition(40, 40);
     }
   }
 
@@ -196,31 +205,89 @@ export class Platformer extends Scene {
       runChildUpdate: true,
     });
 
-    // Define the number of darklings to spawn
+    if (this.isNewGame) {
+      this.createIntroductoryDarkling();
+    } else {
+      this.createRegularDarklings();
+    }
+
+    // Add collisions for both cases
+    const collidableLayers = ["Ground", "Platforms", "Gutter"];
+    collidableLayers.forEach((layerName) => {
+      if (this.layers[layerName]) {
+        this.physics.add.collider(this.darklings, this.layers[layerName]);
+      }
+    });
+  }
+
+  private createIntroductoryDarkling(): void {
+    // Position the intro darkling at a specific spot ahead of the player's starting position
+    const introDarklingX = 400; // Adjust this value based on your level design
+    const introDarklingY = 500; // Adjust for ground level
+
+    this.introDarkling = new Darkling(this, introDarklingX, introDarklingY);
+    this.darklings.add(this.introDarkling);
+
+    // Add overlap detection between player and intro darkling
+    this.physics.add.overlap(
+      this.player,
+      this.introDarkling,
+      this.handleIntroOverlap,
+      undefined,
+      this
+    );
+  }
+
+  private createRegularDarklings(): void {
+    const margin = 100;
+    const spawnArea = {
+      x: margin,
+      y: margin,
+      width: this.map.widthInPixels - margin * 2,
+      height: this.map.heightInPixels - margin * 2,
+    };
+
     const numberOfDarklings = 5;
-
-    // Get map dimensions
-    const mapWidth = this.map.widthInPixels;
-    const mapHeight = this.map.heightInPixels;
-
-    // Spawn darklings randomly within the map bounds
     for (let i = 0; i < numberOfDarklings; i++) {
-      const spawnX = Phaser.Math.Between(0, mapWidth);
-      const spawnY = Phaser.Math.Between(0, mapHeight);
-
+      const spawnX = Phaser.Math.Between(
+        spawnArea.x,
+        spawnArea.x + spawnArea.width
+      );
+      const spawnY = Phaser.Math.Between(
+        spawnArea.y,
+        spawnArea.y + spawnArea.height
+      );
       const darkling = new Darkling(this, spawnX, spawnY);
       this.darklings.add(darkling);
     }
+  }
 
-    // Add collision with ground and platforms
-    if (this.layers["Ground"]) {
-      this.physics.add.collider(this.darklings, this.layers["Ground"]);
-    }
-    if (this.layers["Platforms"]) {
-      this.physics.add.collider(this.darklings, this.layers["Platforms"]);
-    }
-    if (this.layers["Gutter"]) {
-      this.physics.add.collider(this.darklings, this.layers["Gutter"]);
+  private handleIntroOverlap(): void {
+    if (!this.introTriggered && this.player && this.introDarkling) {
+      this.introTriggered = true;
+
+      // Pause physics and player controls
+      this.physics.pause();
+
+      // Ensure the player faces the darkling
+      this.player.setFlipX(this.player.x > this.introDarkling.x);
+
+      // Small delay before starting the look sequence
+      this.time.delayedCall(500, () => {
+        // Play player's intro animation sequence
+        this.player.play("lookIntro", true).once("animationcomplete", () => {
+          this.player.play("lookBlink", true).once("animationcomplete", () => {
+            // Brief pause before scene transition
+            this.time.delayedCall(1000, () => {
+              // Resume physics
+              this.physics.resume();
+
+              // Start the Echoes of Failure scene
+              this.scene.start("EchoesOfFailure");
+            });
+          });
+        });
+      });
     }
   }
 
@@ -275,11 +342,36 @@ export class Platformer extends Scene {
       layer.tilePositionX = this.cameras.main.scrollX * layer.scrollFactorX;
     });
 
-    if (this.healthBar) {
-      this.healthBar.update(this.camera);
+    if (this.playerHealthBar) {
+      this.playerHealthBar.update(this.camera);
     }
 
     this.player?.update?.();
+
+    if (this.isNewGame && this.introDarkling && !this.introTriggered) {
+      const distance = Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        this.introDarkling.x,
+        this.introDarkling.y
+      );
+
+      // Attack range
+      const attackRange = 200;
+
+      if (distance <= attackRange) {
+        // Face the player
+        this.introDarkling.setFlipX(this.introDarkling.x > this.player.x);
+
+        // Trigger attack if not already attacking
+        if (!this.introDarkling.isAttacking) {
+          this.introDarkling.attack(() => {
+            // After attack animation completes
+            this.handleIntroOverlap();
+          });
+        }
+      }
+    }
   }
 
   changeScene() {
