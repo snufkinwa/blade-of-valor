@@ -85,6 +85,11 @@ export class PlayerHealthBar extends BaseHealthBar {
     this.healthFill.setScale(fillWidth * 1.5, 1.5);
   }
 
+  updateHealth(amount: number): void {
+    this.value = Math.min(100, this.value + amount); // Ensure health does not exceed 100
+    this.updateBar();
+  }
+
   destroy() {
     this.background.destroy();
     this.healthFill.destroy();

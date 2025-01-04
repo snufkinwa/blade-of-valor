@@ -8,6 +8,7 @@ export class CombatSystem {
   private scene: Scene;
   private knight: Knight;
   private darklings: Darkling[] = [];
+  private WAVE_THRESHOLD = 15;
   private hitAnimationThreshold: number = 10;
   private isInvulnerable: boolean = false;
   private invulnerabilityDuration: number = 1000;
@@ -31,7 +32,7 @@ export class CombatSystem {
   }
 
   private setupEventListeners(): void {
-    EventBus.on("darkling-wave", this.spawnDarklingWave.bind(this));
+    EventBus.on("darkling-wave", this.handleDarklingWave.bind(this));
     EventBus.on("darkling-attack", this.handleDarklingAttack.bind(this));
     EventBus.on("player-damage", this.handlePlayerDamage.bind(this));
     EventBus.on("darkness-level-update", this.updateCorruptionLevel.bind(this));
@@ -56,34 +57,42 @@ export class CombatSystem {
     });
   }
 
-  private spawnDarklingWave(data: { count: number; baseY: number }): void {
-    // Clear previous wave
-    this.darklings.forEach((darkling) => darkling.destroy());
-    this.darklings = [];
+  private handleDarklingWave(): void {
+    if (this.darklings.length >= this.WAVE_THRESHOLD) {
+      this.spawnWave();
+    }
+  }
 
-    // Spawn new wave
-    for (let i = 0; i < data.count; i++) {
-      const darkling = new Darkling(
-        this.scene,
-        this.scene.cameras.main.width + 100,
-        data.baseY
-      );
-      darkling.setWavePosition(i, data.baseY);
-      this.darklings.push(darkling);
+  private spawnWave(): void {
+    this.darklings.forEach((darkling, index) => {
+      darkling.setWavePosition(index, this.scene.cameras.main.height - 100);
+    });
+  }
 
-      // Setup collision with knight
-      this.scene.physics.add.overlap(this.knight, darkling, (obj1, obj2) => {
-        // Type cast the objects to their correct types
-        const knight = obj1 as Knight;
-        const darkling = obj2 as Darkling;
-        this.handleDarklingCollision(knight, darkling);
-      });
+  public addDarkling(x: number, y: number): void {
+    const darkling = new Darkling(this.scene, x, y);
+    this.darklings.push(darkling);
+
+    // Add collision detection for this darkling
+    this.scene.physics.add.overlap(
+      this.knight,
+      darkling,
+      (knight, darklingSprite) => {
+        this.handleDarklingCollision(
+          knight as Knight,
+          darklingSprite as Darkling
+        );
+      }
+    );
+
+    if (this.darklings.length >= this.WAVE_THRESHOLD) {
+      EventBus.emit("darkling-wave");
     }
   }
 
   private handleDarklingCollision(knight: Knight, darkling: Darkling): void {
     if (!this.isInvulnerable) {
-      this.applyDamage(10); // Base damage value
+      this.applyDamage(10);
       darkling.attack();
     }
   }
@@ -109,7 +118,6 @@ export class CombatSystem {
 
     this.knight.attack(attackType);
 
-    // Check for darkling hits during attack
     this.darklings.forEach((darkling) => {
       const distance = Phaser.Math.Distance.Between(
         this.knight.x,
@@ -119,7 +127,6 @@ export class CombatSystem {
       );
 
       if (distance < 60) {
-        // Attack range
         darkling.hurt();
         darkling.disappear(() => {
           const index = this.darklings.indexOf(darkling);
@@ -157,7 +164,6 @@ export class CombatSystem {
       this.startInvulnerabilityPeriod();
       this.knight.takeDamage();
     }
-
     this.bossBar.setValue(this.knight.hp);
   }
 
@@ -205,11 +211,8 @@ export class CombatSystem {
   }
 
   private handleCorruption(): void {
-    // Reset health but maintain corruption
     if (this.knight.hp) this.knight.hp = 100;
     this.bossBar.setValue(100);
-
-    // Emit event for game state changes
     EventBus.emit("player-corrupted");
   }
 

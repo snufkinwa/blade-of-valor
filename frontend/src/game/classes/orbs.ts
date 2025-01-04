@@ -1,5 +1,6 @@
 import { Scene, Physics } from "phaser";
 import { EventBus } from "../EventBus";
+import { PlayerHealthBar } from "./HealthBar";
 
 export class Orb extends Physics.Arcade.Sprite {
   private isLarge: boolean;
@@ -128,18 +129,22 @@ export class OrbSystem {
     }
   }
 
-  setupCollision(target: Physics.Arcade.Sprite): void {
+  setupCollision(
+    target: Physics.Arcade.Sprite,
+    healthBar: PlayerHealthBar
+  ): void {
     this.scene.physics.add.overlap(target, this.orbs, (obj1, obj2) => {
       const orb = obj2 as Orb;
-      this.collectOrb(orb);
+      this.collectOrb(orb, healthBar);
     });
   }
 
-  private collectOrb(orb: Orb): void {
+  private collectOrb(orb: Orb, healthBar: PlayerHealthBar): void {
     const index = this.orbs.indexOf(orb);
     if (index > -1) {
       this.orbs.splice(index, 1);
-      this.increaseLightLevel(orb.isLargeOrb() ? 15 : 10);
+      const healthIncrease = orb.isLargeOrb() ? 15 : 10;
+      healthBar.updateHealth(healthIncrease);
 
       this.scene.tweens.add({
         targets: orb,

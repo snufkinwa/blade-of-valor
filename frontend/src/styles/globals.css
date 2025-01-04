@@ -4,8 +4,8 @@
 }
 
 @font-face {
-  font-family: "Rover Cloxe";
-  src: url("/font/Rover_Cloxe_Demo.ttf") format("truetype");
+  font-family: "Too Much Ink";
+  src: url("/font/TooMuchInk.ttf") format("truetype");
 }
 
 body {
@@ -13,7 +13,7 @@ body {
   padding: 0;
   color: rgba(255, 255, 255, 0.87);
   background-color: #000000;
-  font-family: "Public Pixel", "Rover Cloxe", Arial, Helvetica, sans-serif;
+  font-family: "Public Pixel", "Too Much Ink", Arial, Helvetica, sans-serif;
 }
 
 #app {

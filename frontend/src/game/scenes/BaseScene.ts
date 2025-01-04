@@ -5,14 +5,15 @@ import Darkling from "../classes/darkling";
 import { PlayerHealthBar } from "../classes/HealthBar";
 
 export class BaseScene extends Scene {
-  private map!: Phaser.Tilemaps.Tilemap;
-  private layers: Record<string, Phaser.Tilemaps.TilemapLayer | null> = {};
-  private imageLayers: Record<string, GameObjects.TileSprite> = {};
-  private fogLayers: Record<string, GameObjects.TileSprite> = {};
+  protected map!: Phaser.Tilemaps.Tilemap;
+  protected layers: Record<string, Phaser.Tilemaps.TilemapLayer | null> = {};
+  protected imageLayers: Record<string, GameObjects.TileSprite> = {};
+  protected fogLayers: Record<string, GameObjects.TileSprite> = {};
   protected player!: Player;
   protected darklings!: Phaser.Physics.Arcade.Group;
-  private playerHealthBar!: PlayerHealthBar;
-  camera!: Cameras.Scene2D.Camera;
+  protected playerHealthBar!: PlayerHealthBar;
+  protected camera!: Cameras.Scene2D.Camera;
+  private currentForm: "light" | "dark" = "light";
 
   constructor(key: string) {
     super(key);
@@ -28,6 +29,7 @@ export class BaseScene extends Scene {
     this.createFogLayers();
     this.generateParticleTexture();
     EventBus.emit("current-scene-ready", this);
+    EventBus.on("transform-pressed", this.togglePlayerForm, this);
   }
 
   private setupCamera() {
@@ -169,6 +171,16 @@ export class BaseScene extends Scene {
     graphics.destroy(); // Cleanup the graphics object
   }
 
+  private togglePlayerForm() {
+    // Toggle the form
+    this.currentForm = this.currentForm === "light" ? "dark" : "light";
+
+    // Update the PlayerHealthBar's crystal form
+    if (this.playerHealthBar) {
+      this.playerHealthBar.setForm(this.currentForm);
+    }
+  }
+
   private createPlayer() {
     const groundY = 530;
     this.player = new Player(this, 100, groundY, "light");
@@ -193,6 +205,7 @@ export class BaseScene extends Scene {
     this.darklings = this.physics.add.group({
       classType: Darkling,
       runChildUpdate: true,
+      collideWorldBounds: true,
     });
 
     const collidableLayers = ["Ground", "Platforms", "Gutter"];
@@ -202,6 +215,7 @@ export class BaseScene extends Scene {
       }
     });
   }
+
   private setupPhysics() {
     this.physics.world.setBounds(
       0,

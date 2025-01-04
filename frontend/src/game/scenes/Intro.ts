@@ -55,7 +55,7 @@ export class Intro extends Scene {
       .setAlpha(0);
 
     this.architectPanel = this.add
-      .nineslice(200, 380, "ui", "dialogueBox", 650, 200, 16, 16, 16, 16)
+      .nineslice(240, 380, "ui", "dialogueBox", 650, 200, 16, 16, 16, 16)
       .setOrigin(0, 0)
       .setAlpha(0);
 
@@ -88,14 +88,14 @@ export class Intro extends Scene {
     this.elaraDialogueText = this.addText(140, 150, "", 24, "#ffffff");
 
     this.architectSpeakerText = this.addText(
-      220,
+      260,
       400,
       "",
       18,
       "#FFD700",
       "bold"
     );
-    this.architectDialogueText = this.addText(220, 430, "", 24, "#ffffff");
+    this.architectDialogueText = this.addText(260, 430, "", 24, "#ffffff");
 
     this.showDialoguePanel(() => {
       this.displayNextDialogue();

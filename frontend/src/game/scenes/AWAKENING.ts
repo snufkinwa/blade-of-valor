@@ -13,32 +13,70 @@ export class IntroScene extends BaseScene {
 
   create() {
     super.create();
-    this.createIntroDarkling();
+    this.setupIntroDarklingArea();
     this.createDialoguePanel();
-    EventBus.emit("current-scene-ready", this);
   }
 
-  private createDialoguePanel(): void {
-    this.dialoguePanel = this.add.container(0, 0);
-    this.dialoguePanel.setDepth(1000);
+  private setupIntroDarklingArea() {
+    const x = 800;
+    const y = 785;
+    const width = 80;
+    const height = 100;
 
-    // Create the dialogue box background
-    const panel = this.add.nineslice(
-      this.cameras.main.centerX,
-      this.cameras.main.height - 150,
-      "ui",
-      "dialogueBox",
-      600,
-      100,
-      16,
-      16,
-      16,
-      16
+    const cage = {
+      platform: this.add.rectangle(x, y + 40, width, 10),
+      leftWall: this.add.rectangle(x - width / 2, y, 10, height),
+      rightWall: this.add.rectangle(x + width / 2, y, 10, height),
+      ceiling: this.add.rectangle(x, y - height / 2, width, 10),
+    };
+
+    Object.values(cage).forEach((part) => {
+      this.physics.add.existing(part, true);
+    });
+
+    this.introDarkling = new Darkling(this, x, y);
+    this.darklings.add(this.introDarkling);
+    this.physics.add.collider(this.introDarkling, Object.values(cage));
+
+    // Create visible trigger zone for debugging
+    const triggerZone = this.add.rectangle(
+      x - 10,
+      y,
+      20,
+      height,
+      0xff0000,
+      0.3
     );
-    panel.setOrigin(0.5);
-    panel.setAlpha(0);
+    this.physics.add.existing(triggerZone, true);
 
-    // Create text elements
+    // Check player's vertical velocity in overlap
+    this.physics.add.overlap(this.player, triggerZone, () => {
+      const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
+      if (!this.introTriggered && Math.abs(playerBody.velocity.y) < 50) {
+        this.startIntroSequence();
+      }
+    });
+  }
+
+  private createDialoguePanel() {
+    this.dialoguePanel = this.add.container(0, 0).setDepth(1000);
+
+    const panel = this.add
+      .nineslice(
+        this.cameras.main.centerX,
+        this.cameras.main.centerY,
+        "ui",
+        "dialogueBox",
+        600,
+        100,
+        16,
+        16,
+        16,
+        16
+      )
+      .setOrigin(0.5)
+      .setAlpha(0);
+
     const speakerText = this.add.text(
       this.cameras.main.centerX - 280,
       this.cameras.main.height - 185,
@@ -65,67 +103,34 @@ export class IntroScene extends BaseScene {
     this.dialoguePanel.setAlpha(0);
   }
 
-  private createIntroDarkling(): void {
-    const introDarklingX = 800;
-    const introDarklingY = 785;
+  private async startIntroSequence() {
+    this.introTriggered = true;
+    EventBus.emit("disable-controls");
+    this.physics.pause();
 
-    // Create invisible platform and walls
-    const cagePlatform = this.add.rectangle(
-      introDarklingX,
-      introDarklingY + 40,
-      80,
-      10
-    );
-    this.physics.add.existing(cagePlatform, true);
+    if (this.player && this.introDarkling) {
+      this.player.setFlipX(this.player.x > this.introDarkling.x);
+      this.introDarkling.attack();
 
-    const leftWall = this.add.rectangle(
-      introDarklingX - 10,
-      introDarklingY,
-      10,
-      80
-    );
-    const rightWall = this.add.rectangle(
-      introDarklingX + 40,
-      introDarklingY,
-      10,
-      80
-    );
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await this.showDialogue("Elara", "The shadows... they're moving...");
+      await this.showDialogue("???", "Your light... it calls to us...");
+      await this.showDialogue("Elara", "Stay back! What are you?!");
 
-    this.physics.add.existing(leftWall, true);
-    this.physics.add.existing(rightWall, true);
-
-    this.introDarkling = new Darkling(this, introDarklingX, introDarklingY);
-    this.darklings.add(this.introDarkling);
-
-    const body = this.introDarkling.body as Phaser.Physics.Arcade.Body;
-    body.setGravityY(1000);
-
-    this.physics.add.collider(this.introDarkling, [
-      cagePlatform,
-      leftWall,
-      rightWall,
-    ]);
-
-    this.physics.add.overlap(
-      this.player,
-      this.introDarkling,
-      this.handleIntroOverlap,
-      undefined,
-      this
-    );
-
-    this.introDarkling.setPlayer(this.player);
+      this.cameras.main.fadeOut(1000);
+      this.cameras.main.once("camerafadeoutcomplete", () => {
+        this.scene.start("EchoesOfFailure");
+      });
+    }
   }
 
   private showDialogue(speaker: string, text: string): Promise<void> {
-    return new Promise<void>((resolve) => {
-      const panel = this.dialoguePanel.getAt(0) as Phaser.GameObjects.NineSlice;
-      const speakerText = this.dialoguePanel.getAt(
-        1
-      ) as Phaser.GameObjects.Text;
-      const dialogueText = this.dialoguePanel.getAt(
-        2
-      ) as Phaser.GameObjects.Text;
+    return new Promise((resolve) => {
+      const [panel, speakerText, dialogueText] = this.dialoguePanel.list as [
+        Phaser.GameObjects.NineSlice,
+        Phaser.GameObjects.Text,
+        Phaser.GameObjects.Text
+      ];
 
       speakerText.setText(speaker);
       dialogueText.setText(text);
@@ -140,69 +145,11 @@ export class IntroScene extends BaseScene {
               targets: this.dialoguePanel,
               alpha: 0,
               duration: 300,
-              onComplete: () => {
-                resolve();
-              },
+              onComplete: () => resolve(),
             });
           });
         },
       });
     });
-  }
-
-  private playPlayerAnimation(animKey: string): Promise<void> {
-    return new Promise<void>((resolve) => {
-      if (!this.player) {
-        resolve();
-        return;
-      }
-
-      this.player.play(animKey, true).once("animationcomplete", () => {
-        resolve();
-      });
-    });
-  }
-
-  private async handleIntroOverlap() {
-    if (!this.introTriggered && this.player && this.introDarkling) {
-      this.introTriggered = true;
-      this.physics.pause();
-
-      const playerDirection = this.player.x > (this.introDarkling?.x ?? 0);
-      this.player.setFlipX(playerDirection);
-
-      // Play initial animations
-      await this.playPlayerAnimation("lookIntro");
-      await this.playPlayerAnimation("lookBlink");
-
-      // Show dialogue sequence
-      await this.showDialogue("Elara", "The shadows... they're moving...");
-      await this.showDialogue("???", "Your light... it calls to us...");
-      await this.showDialogue("Elara", "Stay back! What are you?!");
-
-      // Transition to next scene
-      this.cameras.main.fadeOut(1000, 0, 0, 0);
-      this.cameras.main.once("camerafadeoutcomplete", () => {
-        this.scene.start("EchoesOfFailure");
-      });
-    }
-  }
-
-  update() {
-    super.update();
-
-    // Add any additional update logic specific to the intro scene
-    if (this.introDarkling && !this.introTriggered) {
-      const distance = Phaser.Math.Distance.Between(
-        this.player.x,
-        this.player.y,
-        this.introDarkling.x,
-        this.introDarkling.y
-      );
-
-      if (distance < 200) {
-        this.introDarkling.setFlipX(this.introDarkling.x > this.player.x);
-      }
-    }
   }
 }

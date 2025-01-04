@@ -145,6 +145,8 @@ export class Preloader extends Scene {
       "elara_portrait_dark",
       getAssetUrl("portrait/elara_portrait_black.png")
     );
+
+    this.load.image("darklingBG", getAssetUrl("EchoesofFailures.png"));
   }
 
   private loadTilemapAssets() {
