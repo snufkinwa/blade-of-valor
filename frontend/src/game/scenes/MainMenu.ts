@@ -135,7 +135,7 @@ export class MainMenu extends Scene {
           this.scene.start("Intro", {
             isNewGame: true,
             onIntroComplete: () => {
-              this.scene.start("Platformer", { isNewGame: true });
+              this.scene.start("IntroScene");
             },
           });
         });
@@ -144,7 +144,7 @@ export class MainMenu extends Scene {
         this.cameras.main.fadeOut(500, 0, 0, 0);
         this.cameras.main.once("camerafadeoutcomplete", () => {
           this.cleanupAudio();
-          this.scene.start("Platformer", { isNewGame: false });
+          this.scene.start("Corruption");
         });
         break;
       case 2: // Tutorial

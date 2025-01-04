@@ -92,7 +92,7 @@ export const handleGameInput = (
       }
       break;
 
-    case "Platformer":
+    case "IntroScene":
     case "Intro":
     case "Corruption":
     case "FinalBattle":

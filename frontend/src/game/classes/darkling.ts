@@ -237,7 +237,7 @@ export default class Darkling extends Physics.Arcade.Sprite {
   }
 
   private handleWaveMovement(body: Physics.Arcade.Body): void {
-    const baseSpeed = -150;
+    const baseSpeed = -450;
     body.setVelocityX(baseSpeed);
 
     const oscillation = Math.sin(this.scene.time.now / 500) * 2;

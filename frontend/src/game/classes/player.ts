@@ -54,8 +54,8 @@ export class Player extends Physics.Arcade.Sprite {
   private setupAnimations(scene: Phaser.Scene, texture: string): void {
     const animations = [
       { key: "idle", start: 1, end: 3, frameRate: 1, repeat: -1 },
-      { key: "lookIntro", start: 4, end: 9, frameRate: 10, repeat: 0 },
-      { key: "lookBlink", start: 10, end: 11, frameRate: 10, repeat: -1 },
+      { key: "lookIntro", start: 4, end: 9, frameRate: 8, repeat: 0 },
+      { key: "lookBlink", start: 10, end: 11, frameRate: 3, repeat: -1 },
       { key: "lookBack", start: 12, end: 15, frameRate: 10, repeat: 0 },
       { key: "run", start: 16, end: 25, frameRate: 10, repeat: -1 },
       { key: "jump", start: 47, end: 50, frameRate: 10, repeat: -1 },

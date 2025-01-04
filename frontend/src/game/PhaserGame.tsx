@@ -1,7 +1,6 @@
 import { forwardRef, useEffect, useLayoutEffect, useRef } from "react";
 import StartGame from "./main";
 import { EventBus } from "./EventBus";
-import WebSocketService from "./WebSocketService";
 import { handleGameInput, setCurrentScene } from "./command";
 
 export interface IRefPhaserGame {
@@ -17,12 +16,10 @@ export const PhaserGame = forwardRef<IRefPhaserGame, IProps>(
   function PhaserGame({ currentActiveScene }, ref) {
     const game = useRef<Phaser.Game | null>(null);
     const sceneRef = useRef<Phaser.Scene | null>(null);
-    const wsService = useRef<WebSocketService | null>(null);
 
     useLayoutEffect(() => {
       if (game.current === null) {
         game.current = StartGame("game-container");
-        wsService.current = WebSocketService.getInstance("game1");
 
         if (typeof ref === "function") {
           ref({ game: game.current, scene: null });

@@ -1,12 +1,13 @@
 import { Boot } from "./scenes/Boot";
 import { GameOver } from "./scenes/GameOver";
 import { Intro } from "./scenes/Intro";
-import { Platformer as Opening } from "./scenes/AWAKENING";
+import { IntroScene as Opening } from "./scenes/AWAKENING";
 import { Corruption as Middlegame } from "./scenes/CORRUPTION";
 import { FinalBattle as Endgame } from "./scenes/FinalBattle";
 import { MainMenu } from "./scenes/MainMenu";
 import { Tutorial } from "./scenes/Tutorial";
 import { PauseMenu } from "./scenes/PauseMenu";
+import { EchoesOfFailure } from "./scenes/EchoesOfFailure";
 import { AUTO, Game } from "phaser";
 import { Preloader } from "./scenes/Preloader";
 
@@ -29,6 +30,7 @@ const config: Phaser.Types.Core.GameConfig = {
     GameOver,
     Tutorial,
     PauseMenu,
+    EchoesOfFailure,
   ],
   physics: {
     default: "arcade",
