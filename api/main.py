@@ -1,23 +1,27 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Dict, Optional
+from typing import Dict
 import asyncio
 import chess
-import os
 from datetime import datetime
 from pydantic import ValidationError
 
 from core.game_state import GameStateManager
-from config.settings import Settings
 from exceptions.errors import GameError, GameLimitExceeded
 from models.enums import DarknessState
 
-print("Environment Variables Passed to Settings:", os.environ)
+# Direct configuration without Settings
+GAME_TIMEOUT = 600  # Game timeout in seconds (10 minutes)
+MAX_GAMES = 10  # Maximum number of concurrent games
 
-settings = Settings()
+# Stockfish path
+STOCKFISH_PATH = "/usr/local/bin/stockfish"
+
+# Initialize FastAPI app and game manager
 app = FastAPI()
-game_manager = GameStateManager(settings)
+game_manager = GameStateManager(STOCKFISH_PATH)  # Pass the Stockfish path directly
 
+# CORS Middleware setup
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -26,6 +30,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Connection Manager
 class ConnectionManager:
     def __init__(self):
         self.active_connections: Dict[str, WebSocket] = {}
@@ -42,12 +47,13 @@ class ConnectionManager:
 
 connection_manager = ConnectionManager()
 
+# Cleanup inactive games
 async def cleanup_inactive_games():
     while True:
         try:
             now = datetime.now()
             for game_id, last_active in connection_manager.last_activity.copy().items():
-                if (now - last_active).seconds > settings.GAME_TIMEOUT:
+                if (now - last_active).seconds > GAME_TIMEOUT:
                     game_manager.remove_game(game_id)
                     connection_manager.disconnect(game_id)
             await asyncio.sleep(60)
@@ -66,28 +72,28 @@ async def root():
 @app.websocket("/ws/{game_id}")
 async def websocket_endpoint(websocket: WebSocket, game_id: str):
     try:
-        if len(game_manager.games) >= settings.MAX_GAMES:
+        if len(game_manager.games) >= MAX_GAMES:
             raise GameLimitExceeded("Maximum number of concurrent games reached")
-            
+
         await connection_manager.connect(game_id, websocket)
-        
+
         if game_id not in game_manager.games:
             game_manager.create_game(game_id)
-        
+
         game = game_manager.get_game(game_id)
         if not game:
             raise GameError("Failed to initialize game")
-        
+
         while True:
             try:
                 data = await websocket.receive_json()
                 connection_manager.last_activity[game_id] = datetime.now()
-                
-                if data["type"] == "move":             
+
+                if data["type"] == "move":
                     result = game.make_move(data["move"], data.get("use_dark_power", False))
                     wave = game.get_darkling_wave()
                     stats = game.darkness_system.get_stats()
-                    
+
                     await websocket.send_json({
                         "status": "success",
                         "engine_move": result,
@@ -99,8 +105,8 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                         "status": "error",
                         "message": "Invalid message type"
                     })
-                    
-            except ValidationError as e:
+
+            except ValidationError:
                 await websocket.send_json({
                     "status": "error",
                     "message": "Invalid request format"
@@ -116,7 +122,7 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                     "status": "error",
                     "message": "Internal server error"
                 })
-                
+
     except WebSocketDisconnect:
         print(f"Client disconnected: {game_id}")
         connection_manager.disconnect(game_id)
