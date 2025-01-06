@@ -1,244 +1,145 @@
 import { Scene } from "phaser";
-import { Knight } from "../classes/knight";
 import Darkling from "../classes/darkling";
 import { EventBus } from "../EventBus";
-import { BossHealthBar } from "./HealthBar";
+import { OrbSystem } from "./orbs";
 
 export class CombatSystem {
   private scene: Scene;
-  private knight: Knight;
   private darklings: Darkling[] = [];
-  private WAVE_THRESHOLD = 15;
-  private hitAnimationThreshold: number = 10;
-  private isInvulnerable: boolean = false;
-  private invulnerabilityDuration: number = 1000;
-  private bossBar: BossHealthBar;
-  private corruptionLevel: number = 0;
-  private maxCorruption: number = 100;
-  private attackQueue: string[] = [];
-  private isProcessingAttacks = false;
+  private orbSystem: OrbSystem;
+  private playerSprite: Phaser.GameObjects.Sprite;
+  private spawnTimer: Phaser.Time.TimerEvent;
+  private checkDistanceTimer: Phaser.Time.TimerEvent;
+  private readonly CHASE_DISTANCE = 200;
+  private readonly ATTACK_DISTANCE = 60;
+  private readonly DAMAGE_AMOUNT = 2;
+  private isPlayerInvulnerable = false;
+  private invulnerabilityDuration = 6000;
 
-  constructor(scene: Scene, x: number, y: number) {
+  constructor(scene: Scene, playerSprite: Phaser.GameObjects.Sprite) {
     this.scene = scene;
-    this.knight = new Knight(scene, x, y);
+    this.playerSprite = playerSprite;
+    this.orbSystem = new OrbSystem(scene);
     this.setupEventListeners();
-    this.bossBar = new BossHealthBar(
-      scene,
-      100,
-      20,
-      "bossTexture",
-      "bossFillTexture"
-    );
+    this.startSpawning();
+    this.startDistanceCheck();
   }
 
   private setupEventListeners(): void {
-    EventBus.on("darkling-wave", this.handleDarklingWave.bind(this));
-    EventBus.on("darkling-attack", this.handleDarklingAttack.bind(this));
-    EventBus.on("player-damage", this.handlePlayerDamage.bind(this));
-    EventBus.on("darkness-level-update", this.updateCorruptionLevel.bind(this));
-
-    // Combat controls
-    EventBus.on("attack-1-pressed", () => this.queueAttack(1));
-    EventBus.on("attack-2-pressed", () => this.queueAttack(2));
-    EventBus.on("attack-3-pressed", () => this.queueAttack(3));
-
-    // Movement controls
-    EventBus.on("run-pressed", (direction: "ArrowLeft" | "ArrowRight") => {
-      const velocity = direction === "ArrowLeft" ? -200 : 200;
-      this.knight.startRun(velocity);
-    });
-
-    EventBus.on("run-released", () => {
-      this.knight.stopRun();
-    });
-
-    EventBus.on("jump-pressed", () => {
-      this.knight.jump();
-    });
-  }
-
-  private handleDarklingWave(): void {
-    if (this.darklings.length >= this.WAVE_THRESHOLD) {
-      this.spawnWave();
-    }
-  }
-
-  private spawnWave(): void {
-    this.darklings.forEach((darkling, index) => {
-      darkling.setWavePosition(index, this.scene.cameras.main.height - 100);
-    });
-  }
-
-  public addDarkling(x: number, y: number): void {
-    const darkling = new Darkling(this.scene, x, y);
-    this.darklings.push(darkling);
-
-    // Add collision detection for this darkling
-    this.scene.physics.add.overlap(
-      this.knight,
-      darkling,
-      (knight, darklingSprite) => {
-        this.handleDarklingCollision(
-          knight as Knight,
-          darklingSprite as Darkling
-        );
-      }
+    EventBus.on("darkling-defeated", (darkling: Darkling) =>
+      this.handleDarklingDefeat(darkling)
     );
-
-    if (this.darklings.length >= this.WAVE_THRESHOLD) {
-      EventBus.emit("darkling-wave");
-    }
   }
 
-  private handleDarklingCollision(knight: Knight, darkling: Darkling): void {
-    if (!this.isInvulnerable) {
-      this.applyDamage(10);
-      darkling.attack();
-    }
-  }
-
-  private queueAttack(type: 1 | 2 | 3): void {
-    if (this.attackQueue.length < 3) {
-      this.attackQueue.push(type.toString());
-    }
-
-    if (!this.isProcessingAttacks) {
-      this.processAttackQueue();
-    }
-  }
-
-  private processAttackQueue(): void {
-    if (this.attackQueue.length === 0) {
-      this.isProcessingAttacks = false;
-      return;
-    }
-
-    this.isProcessingAttacks = true;
-    const attackType = parseInt(this.attackQueue[0]) as 1 | 2 | 3;
-
-    this.knight.attack(attackType);
-
-    this.darklings.forEach((darkling) => {
-      const distance = Phaser.Math.Distance.Between(
-        this.knight.x,
-        this.knight.y,
-        darkling.x,
-        darkling.y
-      );
-
-      if (distance < 60) {
-        darkling.hurt();
-        darkling.disappear(() => {
-          const index = this.darklings.indexOf(darkling);
-          if (index > -1) {
-            this.darklings.splice(index, 1);
-          }
-          darkling.destroy();
-        });
-      }
-    });
-
-    this.attackQueue.shift();
-
-    this.scene.time.delayedCall(500, () => {
-      if (this.attackQueue.length > 0) {
-        this.processAttackQueue();
-      } else {
-        this.isProcessingAttacks = false;
-      }
-    });
-  }
-
-  private handleDarklingAttack(data: {
-    damage: number;
-    corruption: number;
-  }): void {
-    if (!this.isInvulnerable) {
-      this.applyDamage(data.damage);
-      this.increaseCorruption(data.corruption);
-    }
-  }
-
-  private handlePlayerDamage(damage: number): void {
-    if (damage >= this.hitAnimationThreshold) {
+  private handleDarklingAttack(): void {
+    if (!this.isPlayerInvulnerable) {
+      EventBus.emit("player-damage", this.DAMAGE_AMOUNT);
       this.startInvulnerabilityPeriod();
-      this.knight.takeDamage();
     }
-    this.bossBar.setValue(this.knight.hp);
-  }
-
-  private applyDamage(damage: number): void {
-    if (!this.knight.hp) return;
-
-    this.knight.hp -= damage;
-    this.handlePlayerDamage(damage);
-
-    if (this.knight.hp <= 0) {
-      this.handleCorruption();
-    }
-  }
-
-  private increaseCorruption(amount: number): void {
-    this.corruptionLevel = Math.min(
-      this.maxCorruption,
-      this.corruptionLevel + amount
-    );
-
-    if (this.corruptionLevel >= this.maxCorruption) {
-      this.handleCorruption();
-    }
-  }
-
-  private updateCorruptionLevel(level: number): void {
-    this.corruptionLevel = level;
   }
 
   private startInvulnerabilityPeriod(): void {
-    this.isInvulnerable = true;
-
-    this.scene.tweens.add({
-      targets: this.knight,
-      alpha: 0.7,
-      duration: 200,
-      yoyo: true,
-      repeat: 2,
-      ease: "Cubic.easeInOut",
-    });
-
+    this.isPlayerInvulnerable = true;
     this.scene.time.delayedCall(this.invulnerabilityDuration, () => {
-      this.isInvulnerable = false;
+      this.isPlayerInvulnerable = false;
     });
   }
 
-  private handleCorruption(): void {
-    if (this.knight.hp) this.knight.hp = 100;
-    this.bossBar.setValue(100);
-    EventBus.emit("player-corrupted");
+  private startSpawning(): void {
+    this.spawnTimer = this.scene.time.addEvent({
+      delay: 3000,
+      callback: this.spawnDarkling,
+      callbackScope: this,
+      loop: true,
+    });
+  }
+
+  private startDistanceCheck(): void {
+    this.checkDistanceTimer = this.scene.time.addEvent({
+      delay: 100,
+      callback: this.checkDarklingsDistance,
+      callbackScope: this,
+      loop: true,
+    });
+  }
+
+  private spawnDarkling(): void {
+    if (!this.playerSprite || this.darklings.length >= 5) return;
+
+    const spawnX = this.playerSprite.x + Phaser.Math.Between(-30, 30);
+    const spawnY = this.playerSprite.y - 50;
+
+    const darkling = new Darkling(this.scene, spawnX, spawnY);
+    this.setupDarklingColliders(darkling);
+    darkling.setPlayer(this.playerSprite);
+
+    this.darklings.push(darkling);
+  }
+
+  private checkDarklingsDistance(): void {
+    if (!this.playerSprite) return;
+
+    this.darklings.forEach((darkling) => {
+      const distance = Phaser.Math.Distance.Between(
+        darkling.x,
+        darkling.y,
+        this.playerSprite.x,
+        this.playerSprite.y
+      );
+
+      if (distance > this.CHASE_DISTANCE) {
+        this.handleDarklingRespawn(darkling);
+      } else if (distance <= this.ATTACK_DISTANCE) {
+        darkling.attack();
+        this.handleDarklingAttack();
+      } else {
+        const direction = this.playerSprite.x < darkling.x ? "left" : "right";
+        darkling.walk(direction);
+      }
+    });
+  }
+
+  private handleDarklingRespawn(darkling: Darkling): void {
+    const newX = this.playerSprite.x + Phaser.Math.Between(-50, 50);
+    const newY = this.playerSprite.y;
+
+    darkling.disappear(() => {
+      darkling.respawn(newX, newY, () => {
+        darkling.attack();
+      });
+    });
+  }
+
+  private setupDarklingColliders(darkling: Phaser.GameObjects.Sprite): void {
+    if ((this.scene as any).layers) {
+      ["Ground", "Platforms", "Gutter"].forEach((layerName) => {
+        const layer = (this.scene as any).layers[layerName];
+        if (layer) {
+          this.scene.physics.add.collider(darkling, layer);
+        }
+      });
+    }
+  }
+
+  private handleDarklingDefeat(darkling: Darkling): void {
+    const index = this.darklings.indexOf(darkling);
+    if (index > -1) {
+      this.darklings.splice(index, 1);
+      this.orbSystem.spawnOrbsFromDarkling(darkling.x, darkling.y);
+    }
   }
 
   public update(): void {
-    this.knight.update();
     this.darklings.forEach((darkling) => darkling.update());
   }
 
-  public getKnight(): Knight {
-    return this.knight;
-  }
-
   public cleanup(): void {
-    EventBus.removeListener("darkling-wave");
-    EventBus.removeListener("darkling-attack");
-    EventBus.removeListener("player-damage");
-    EventBus.removeListener("darkness-level-update");
-    EventBus.removeListener("attack-1-pressed");
-    EventBus.removeListener("attack-2-pressed");
-    EventBus.removeListener("attack-3-pressed");
-    EventBus.removeListener("run-pressed");
-    EventBus.removeListener("run-released");
-    EventBus.removeListener("jump-pressed");
+    if (this.spawnTimer) this.spawnTimer.destroy();
+    if (this.checkDistanceTimer) this.checkDistanceTimer.destroy();
 
+    EventBus.removeAllListeners();
     this.darklings.forEach((darkling) => darkling.destroy());
-    this.bossBar.destroy();
-    this.knight.destroy();
+    this.darklings = [];
+    this.orbSystem.cleanup();
   }
 }

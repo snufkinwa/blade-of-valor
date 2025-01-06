@@ -16,11 +16,13 @@ export class Knight extends Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    this.setupAnimations();
+    this.setVisible(false);
+
+    this.initAnimations();
     this.setUpPhysics();
   }
 
-  private setupAnimations(): void {
+  private initAnimations(): void {
     // Idle animation (sprites 1-13)
     this.anims.create({
       key: "idle",

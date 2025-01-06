@@ -1,5 +1,6 @@
 import { Boot } from "./scenes/Boot";
 import { GameOver } from "./scenes/GameOver";
+import { LightEnding } from "./scenes/LightEnding";
 import { Intro } from "./scenes/Intro";
 import { IntroScene as Opening } from "./scenes/AWAKENING";
 import { Corruption as Middlegame } from "./scenes/CORRUPTION";
@@ -28,6 +29,7 @@ const config: Phaser.Types.Core.GameConfig = {
     Middlegame,
     Endgame,
     GameOver,
+    LightEnding,
     Tutorial,
     PauseMenu,
     EchoesOfFailure,

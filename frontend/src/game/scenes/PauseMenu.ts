@@ -52,7 +52,7 @@ export class PauseMenu extends Scene {
       })
       .setOrigin(0.5);
 
-    const options = ["Resume", "Tutorial", "Quit to Menu"];
+    const options = ["Resume", "Quit to Menu"];
     this.menuOptions = options.map((option, index) => {
       return this.add
         .text(0, -30 + index * 40, option, {
@@ -80,11 +80,7 @@ export class PauseMenu extends Scene {
       case 0: // Resume
         this.closeMenu();
         break;
-      case 1: // Tutorial
-        this.scene.launch("Tutorial", { parentScene: this.parentScene });
-        this.scene.stop();
-        break;
-      case 2: // Quit
+      case 1: // Quit
         this.scene.start("MainMenu");
         break;
     }

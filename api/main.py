@@ -1,27 +1,19 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Dict
 import asyncio
-import chess
 from datetime import datetime
 from pydantic import ValidationError
 
 from core.game_state import GameStateManager
 from exceptions.errors import GameError, GameLimitExceeded
-from models.enums import DarknessState
 
-# Direct configuration without Settings
-GAME_TIMEOUT = 600  # Game timeout in seconds (10 minutes)
-MAX_GAMES = 10  # Maximum number of concurrent games
+GAME_TIMEOUT = 600
+MAX_GAMES = 10
 
-# Stockfish path
-STOCKFISH_PATH = "/usr/local/bin/stockfish"
-
-# Initialize FastAPI app and game manager
 app = FastAPI()
-game_manager = GameStateManager(STOCKFISH_PATH)  # Pass the Stockfish path directly
+game_manager = GameStateManager() 
 
-# CORS Middleware setup
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -73,7 +65,8 @@ async def root():
 async def websocket_endpoint(websocket: WebSocket, game_id: str):
     try:
         if len(game_manager.games) >= MAX_GAMES:
-            raise GameLimitExceeded("Maximum number of concurrent games reached")
+            await websocket.close(code=1008, reason="Maximum number of concurrent games reached")
+            return
 
         await connection_manager.connect(game_id, websocket)
 
@@ -82,14 +75,21 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
 
         game = game_manager.get_game(game_id)
         if not game:
-            raise GameError("Failed to initialize game")
+            await websocket.close(code=1011, reason="Failed to initialize game")
+            return
 
         while True:
             try:
                 data = await websocket.receive_json()
                 connection_manager.last_activity[game_id] = datetime.now()
-
-                if data["type"] == "move":
+                
+                if data["type"] == "test-message":
+                    await websocket.send_json({
+                        "status": "success",
+                        "type": "test-message",
+                        "message": "Test message received successfully.",
+                    })
+                elif data["type"] == "move":
                     result = game.make_move(data["move"], data.get("use_dark_power", False))
                     wave = game.get_darkling_wave()
                     stats = game.darkness_system.get_stats()
@@ -106,6 +106,8 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                         "message": "Invalid message type"
                     })
 
+            except WebSocketDisconnect:
+                break
             except ValidationError:
                 await websocket.send_json({
                     "status": "error",
@@ -125,16 +127,13 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
 
     except WebSocketDisconnect:
         print(f"Client disconnected: {game_id}")
-        connection_manager.disconnect(game_id)
-        game_manager.remove_game(game_id)
     except Exception as e:
         print(f"WebSocket error: {e}")
+    finally:
+        # Clean up resources in any case
         connection_manager.disconnect(game_id)
         game_manager.remove_game(game_id)
-        try:
-            await websocket.close(code=1011, reason=str(e))
-        except:
-            pass  # Connection might already be closed
+
 
 @app.on_event("shutdown")
 async def shutdown_event():

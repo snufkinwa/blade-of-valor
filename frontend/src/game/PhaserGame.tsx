@@ -50,6 +50,28 @@ export const PhaserGame = forwardRef<IRefPhaserGame, IProps>(
       };
 
       EventBus.on("current-scene-ready", handleSceneChange);
+      EventBus.on("player-damage", (damage: number) => {
+        if (sceneRef.current) {
+          const scene = sceneRef.current as any;
+          if (scene.playerHealthBar) {
+            const currentHealth = scene.playerHealthBar.getValue();
+            scene.playerHealthBar.setValue(currentHealth - damage);
+          }
+        }
+      });
+      EventBus.on("spawn-orbs", (data: any) => {
+        const scene = sceneRef.current as any;
+        scene?.orbSystem?.spawnOrbs(data.x, data.y);
+      });
+      EventBus.on("darkling-damage", (data: any) => {
+        if (data.health <= 0) {
+          EventBus.emit("spawn-orbs", { x: data.x, y: data.y });
+        }
+      });
+      EventBus.on("darkling-destroy", (data: any) => {
+        EventBus.emit("spawn-orbs", { x: data.x, y: data.y });
+        data.destroy?.();
+      });
       EventBus.on("server-response", (data: any) => {
         if (data.game_stage)
           EventBus.emit("game-stage-update", data.game_stage);
@@ -66,7 +88,7 @@ export const PhaserGame = forwardRef<IRefPhaserGame, IProps>(
 
       return () => {
         EventBus.removeListener("current-scene-ready", handleSceneChange);
-        EventBus.removeListener("server-response");
+        EventBus.removeAllListeners();
         window.removeEventListener("keydown", handleKeyDown);
         window.removeEventListener("keyup", handleKeyUp);
       };

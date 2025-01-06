@@ -1,13 +1,12 @@
 import { EventBus } from "../EventBus";
 import WebSocketService from "../WebSocketService";
+import Darkling from "../classes/darkling";
 import { CombatSystem } from "../classes/combatSystem";
 import { BaseScene } from "./BaseScene";
 
 export class Corruption extends BaseScene {
   private wsService: WebSocketService | null = null;
-  private combatSystem!: CombatSystem;
   private corruptionLevel: number = 0;
-
   constructor() {
     super("Corruption");
   }
@@ -15,18 +14,65 @@ export class Corruption extends BaseScene {
   create() {
     super.create();
 
-    this.setupCombatSystem();
     this.setupWebSocket();
+    this.setUpCombatSystem();
     this.setupEventListeners();
-    EventBus.emit("current-scene-ready", this);
-  }
+    this.testWebSocketConnection("game1");
 
-  private setupCombatSystem() {
-    this.combatSystem = new CombatSystem(this, 100, 300);
+    EventBus.emit("current-scene-ready", this);
   }
 
   private setupWebSocket() {
     this.wsService = WebSocketService.getInstance("game1");
+  }
+
+  private async testWebSocketConnection(gameId: string) {
+    const wsUrl = `ws://localhost:5328/ws/${gameId}`;
+    let websocket: WebSocket;
+
+    try {
+      console.log(`Connecting to WebSocket at ${wsUrl}...`);
+      websocket = new WebSocket(wsUrl);
+
+      // Event listeners
+      websocket.onopen = () => {
+        console.log(`WebSocket connection established for game ID: ${gameId}`);
+      };
+
+      websocket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        console.log("Received response from server:", data);
+
+        // Handle specific game updates
+        if (data.status === "success") {
+          if (data.engine_move) {
+            console.log("Engine's move:", data.engine_move);
+          }
+          if (data.darkling_wave) {
+            console.log("Darkling wave stats:", data.darkling_wave);
+          }
+          if (data.darkness_stats) {
+            console.log("Darkness stats:", data.darkness_stats);
+          }
+        } else if (data.status === "error") {
+          console.error("Error response from server:", data.message);
+        } else {
+          console.log("Unexpected response:", data);
+        }
+      };
+
+      websocket.onerror = (event) => {
+        console.error("WebSocket error occurred:", event);
+      };
+
+      websocket.onclose = (event) => {
+        console.log(
+          `WebSocket connection closed: [${event.code}] ${event.reason}`
+        );
+      };
+    } catch (error) {
+      console.error("Error during WebSocket test:", error);
+    }
   }
 
   private setupEventListeners() {
@@ -43,6 +89,10 @@ export class Corruption extends BaseScene {
     if (data.darkling_wave) {
       EventBus.emit("darkling-wave", data.darkling_wave);
     }
+  }
+
+  private setUpCombatSystem() {
+    const combatSystem = new CombatSystem(this, this.player);
   }
 
   private handlePlayerCorruption() {
@@ -72,10 +122,6 @@ export class Corruption extends BaseScene {
   update() {
     super.update();
 
-    if (this.combatSystem) {
-      this.combatSystem.update();
-    }
-
     this.updateCorruptionEffects();
   }
 
@@ -83,8 +129,6 @@ export class Corruption extends BaseScene {
     if (this.wsService) {
       this.wsService = null;
     }
-
-    this.combatSystem?.cleanup();
 
     EventBus.removeListener("server-response", this.handleServerResponse);
     EventBus.removeListener("player-corrupted", this.handlePlayerCorruption);

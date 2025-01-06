@@ -77,7 +77,7 @@ export class Preloader extends Scene {
       boss_bar: "healthbar/boss_bar.png",
       "crystal-dark": "healthbar/Abyssalorb15.png",
       "crystal-light": "healthbar/Abyssalorb1_Variant 4_1.png",
-      broken_purple_crystal: "healthbar/Abyssalorb9.png",
+      broken_crystal_dark: "healthbar/Abyssalorb9.png",
     };
 
     Object.entries(uiAssets).forEach(([key, path]) => {
@@ -127,6 +127,7 @@ export class Preloader extends Scene {
         "data/architect_portrait.png",
         "data/architect_portrait.json",
       ],
+      architect: ["data/architect.png", "data/architect.json"],
       darkling: ["data/darkling.png", "data/darkling.json"],
       knight: ["data/bloodknight.png", "data/bloodknight.json"],
       droid: ["data/droid.png", "data/droid.json"],

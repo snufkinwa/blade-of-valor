@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { EventBus } from "../EventBus";
 
 // Base health bar class with common functionality
 class BaseHealthBar {
@@ -35,10 +36,15 @@ class BaseHealthBar {
 
 // Player health bar with stamina
 export class PlayerHealthBar extends BaseHealthBar {
+  private currentHealth: number = 100;
+  private maxHealth: number = 100;
+  private darkLevel: number = 50;
   private background: Phaser.GameObjects.Sprite;
   private healthFill: Phaser.GameObjects.TileSprite;
   private healthStamina: Phaser.GameObjects.TileSprite;
   private crystal: Phaser.GameObjects.Sprite;
+  private baseWidthDark: number = 43;
+  private baseWidthLight: number = 57;
   private currentForm: "light" | "dark" = "light";
 
   constructor(
@@ -55,10 +61,22 @@ export class PlayerHealthBar extends BaseHealthBar {
     this.background.setScale(1.5);
     this.background.setOrigin(0, 0).setDepth(5);
 
-    this.healthFill = scene.add.tileSprite(55, 33, 43, 3, healthFillTexture);
+    this.healthFill = scene.add.tileSprite(
+      55,
+      33,
+      this.baseWidthDark,
+      3,
+      healthFillTexture
+    );
     this.healthFill.setOrigin(0, 0).setScale(1.5);
 
-    this.healthStamina = scene.add.tileSprite(54, 21, 57, 3, healthStamina);
+    this.healthStamina = scene.add.tileSprite(
+      54,
+      21,
+      this.baseWidthLight,
+      3,
+      healthStamina
+    );
     this.healthStamina.setOrigin(0, 0).setScale(1.5).setDepth(-1);
 
     this.crystal = scene.add.sprite(30, 30, "crystal-light");
@@ -72,6 +90,11 @@ export class PlayerHealthBar extends BaseHealthBar {
     ]);
 
     this.updateBar();
+
+    EventBus.on("player-damage", (damage: number) => {
+      console.log(`PlayerHealthBar received damage: ${damage}`);
+      this.applyDamage(damage);
+    });
   }
 
   setForm(form: "light" | "dark") {
@@ -80,14 +103,81 @@ export class PlayerHealthBar extends BaseHealthBar {
     this.crystal.setTexture(textureKey);
   }
 
-  protected updateBar() {
-    const fillWidth = this.value / 100;
-    this.healthFill.setScale(fillWidth * 1.5, 1.5);
+  public setValue(value: number): void {
+    this.currentHealth = Phaser.Math.Clamp(value, 0, this.maxHealth);
+    this.updateHealthBar();
+
+    if (this.currentHealth <= 0) {
+      this.currentHealth = this.maxHealth;
+      this.updateHealthBar();
+    }
   }
 
-  updateHealth(amount: number): void {
-    this.value = Math.min(100, this.value + amount); // Ensure health does not exceed 100
-    this.updateBar();
+  private applyDamage(damage: number): void {
+    if (this.baseWidthLight > 0) {
+      // Deplete light health (healthStamina) first
+      this.baseWidthLight = Phaser.Math.Clamp(
+        this.baseWidthLight - damage,
+        0,
+        57
+      );
+      this.updateDarkBar();
+
+      if (this.baseWidthLight === 0) {
+        console.log("Transforming to dark form!");
+        EventBus.emit("transform", "dark");
+        this.setForm("dark");
+      }
+    } else if (this.baseWidthDark > 0) {
+      // Only start depleting dark health (healthFill) after light is gone
+      this.baseWidthDark = Phaser.Math.Clamp(
+        this.baseWidthDark - damage,
+        0,
+        43
+      );
+      this.updateHealthBar();
+
+      if (this.baseWidthDark === 0) {
+        this.crystal.setTexture("broken_crystal_dark");
+        EventBus.emit("player-depleted");
+      }
+    }
+  }
+
+  public getValue(): number {
+    return this.currentHealth;
+  }
+
+  private updateHealthBar(): void {
+    // This should update healthFill (dark health)
+    const fillWidth = (this.baseWidthDark / 43) * 1.5;
+    this.healthFill.setScale(fillWidth, 1.5);
+  }
+
+  private updateDarkBar(): void {
+    // This should update healthStamina (light health)
+    const fillWidth = (this.baseWidthLight / 57) * 1.5;
+    this.healthStamina.setScale(fillWidth, 1.5);
+  }
+
+  public collectOrb(): void {
+    const baseOrbValue = 10;
+
+    // Different healing amounts based on form
+    if (this.currentForm === "light") {
+      // Light form heals more health but gains less darkness
+      this.setValue(this.currentHealth + baseOrbValue * 1.5);
+      this.setDarkLevel(this.darkLevel + baseOrbValue * 0.5);
+    } else {
+      // Dark form gains more darkness but heals less health
+      this.setValue(this.currentHealth + baseOrbValue * 0.5);
+      this.setDarkLevel(this.darkLevel + baseOrbValue * 1.5);
+    }
+  }
+
+  public setDarkLevel(value: number): void {
+    this.darkLevel = Phaser.Math.Clamp(value, 0, 100);
+    this.updateDarkBar();
   }
 
   destroy() {
@@ -102,7 +192,7 @@ export class PlayerHealthBar extends BaseHealthBar {
 // Boss health bar without stamina
 export class BossHealthBar extends BaseHealthBar {
   private bossBar: Phaser.GameObjects.Sprite;
-  private bossFill: Phaser.GameObjects.Sprite;
+  private bossFill: Phaser.GameObjects.TileSprite;
 
   constructor(
     scene: Phaser.Scene,
@@ -114,12 +204,14 @@ export class BossHealthBar extends BaseHealthBar {
     super(scene, x, y);
 
     this.bossBar = scene.add.sprite(0, 0, bossTexture);
-    this.bossFill = scene.add.sprite(0, 0, bossFillTexture);
+
+    this.bossFill = scene.add.tileSprite(9, 20, 205, 9, bossFillTexture);
 
     this.bossBar.setOrigin(0, 0);
+    this.bossBar.setScale(1.5);
     this.bossFill.setOrigin(0, 0);
 
-    this.container.add([this.bossBar, this.bossFill]);
+    this.container.add([this.bossFill, this.bossBar]);
     this.updateBar();
   }
 

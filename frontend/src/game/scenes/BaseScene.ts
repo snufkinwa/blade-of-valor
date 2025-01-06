@@ -11,7 +11,9 @@ export class BaseScene extends Scene {
   protected fogLayers: Record<string, GameObjects.TileSprite> = {};
   protected player!: Player;
   protected darklings!: Phaser.Physics.Arcade.Group;
+  protected particles!: Phaser.GameObjects.Particles.ParticleEmitter;
   protected playerHealthBar!: PlayerHealthBar;
+
   protected camera!: Cameras.Scene2D.Camera;
   private currentForm: "light" | "dark" = "light";
 
@@ -24,10 +26,10 @@ export class BaseScene extends Scene {
     this.createBackgroundLayers();
     this.createPlayer();
     this.setupDarklings();
+    this.setupParticles();
     this.setupPhysics();
     this.setupParallaxEffects();
     this.createFogLayers();
-    this.generateParticleTexture();
     EventBus.emit("current-scene-ready", this);
     EventBus.on("transform-pressed", this.togglePlayerForm, this);
   }
@@ -140,13 +142,23 @@ export class BaseScene extends Scene {
     const fogHeight = 200;
     const mapWidth = this.map.widthInPixels;
 
+    const blackOverlay = this.add.rectangle(
+      0,
+      0,
+      mapWidth,
+      fogHeight - 140,
+      0x000000,
+      1
+    );
+    blackOverlay.setOrigin(0, 0).setDepth(8);
+
     this.fogLayers["fogTop1"] = this.add
       .tileSprite(0, 0, mapWidth, fogHeight, "Fog_Top")
       .setOrigin(0, 0)
       .setTint(0x000000)
       .setScrollFactor(0.8)
+      .setDepth(6)
       .setAlpha(1)
-      .setDepth(4)
       .setScale(2.0);
 
     this.fogLayers["fogTop2"] = this.add
@@ -154,28 +166,14 @@ export class BaseScene extends Scene {
       .setOrigin(0, 0)
       .setScrollFactor(0.6)
       .setTint(0x00000)
+      .setDepth(7)
       .setAlpha(1)
-      .setDepth(5)
       .setScale(2.0);
   }
 
-  private generateParticleTexture() {
-    const graphics = this.add.graphics();
-
-    // Draw a circle for the particle
-    graphics.fillStyle(0xffffff, 1); // White color with full opacity
-    graphics.fillCircle(4, 4, 4); // Center (4, 4), radius = 4
-
-    // Create a texture from the graphics
-    graphics.generateTexture("particle", 8, 8); // Key: "particle", size: 8x8
-    graphics.destroy(); // Cleanup the graphics object
-  }
-
   private togglePlayerForm() {
-    // Toggle the form
     this.currentForm = this.currentForm === "light" ? "dark" : "light";
 
-    // Update the PlayerHealthBar's crystal form
     if (this.playerHealthBar) {
       this.playerHealthBar.setForm(this.currentForm);
     }
@@ -202,17 +200,68 @@ export class BaseScene extends Scene {
   }
 
   private setupDarklings() {
+    // Create the group with physics
     this.darklings = this.physics.add.group({
-      classType: Darkling,
+      classType: Darkling, // Use the Darkling wrapper class
       runChildUpdate: true,
-      collideWorldBounds: true,
     });
 
-    const collidableLayers = ["Ground", "Platforms", "Gutter"];
-    collidableLayers.forEach((layerName) => {
-      if (this.layers[layerName]) {
-        this.physics.add.collider(this.darklings, this.layers[layerName]);
-      }
+    // Add colliders with world layers
+    if (this.layers["Ground"]) {
+      this.physics.add.collider(this.darklings, this.layers["Ground"]);
+    }
+    if (this.layers["Platforms"]) {
+      this.physics.add.collider(this.darklings, this.layers["Platforms"]);
+    }
+    if (this.layers["Gutter"]) {
+      this.physics.add.collider(this.darklings, this.layers["Gutter"]);
+    }
+  }
+
+  protected addDarkling(x: number, y: number): Darkling {
+    const darkling = new Darkling(this, x, y); // Create the Darkling instance
+
+    // Add Darkling to the group
+    this.darklings.add(darkling);
+
+    // Ensure it's colliding with the world layers
+    if (this.layers["Ground"]) {
+      this.physics.add.collider(darkling, this.layers["Ground"]);
+    }
+    if (this.layers["Platforms"]) {
+      this.physics.add.collider(darkling, this.layers["Platforms"]);
+    }
+    if (this.layers["Gutter"]) {
+      this.physics.add.collider(darkling, this.layers["Gutter"]);
+    }
+
+    return darkling;
+  }
+
+  protected setupParticles(): void {
+    const graphics = this.add.graphics();
+    graphics.fillStyle(0xffffff, 1);
+    graphics.fillCircle(4, 4, 4);
+    graphics.generateTexture("particle", 2, 2);
+    graphics.destroy();
+
+    // Check if the texture exists
+    if (!this.textures.exists("particle")) {
+      console.error("Particle texture not found!");
+    }
+
+    // Create particle emitter manager
+    this.particles = this.add.particles(0, 0, "particle", {
+      x: { min: 0, max: this.scale.width },
+      y: { min: 0, max: this.scale.height },
+      lifespan: { min: 2000, max: 4000 },
+      speed: { min: 20, max: 40 },
+      scale: { start: 1, end: 0 },
+      alpha: { start: 1, end: 0 },
+      frequency: 100,
+      blendMode: Phaser.BlendModes.NORMAL,
+      quantity: 2,
+      gravityY: -10,
     });
   }
 
@@ -225,16 +274,26 @@ export class BaseScene extends Scene {
     );
     this.physics.world.gravity.y = 1000;
 
+    // Setup colliders for player
     if (this.layers["Ground"]) {
       this.physics.add.collider(this.player, this.layers["Ground"]);
     }
-
+    if (this.layers["Platforms"]) {
+      this.physics.add.collider(this.player, this.layers["Platforms"]);
+    }
     if (this.layers["Gutter"]) {
       this.physics.add.collider(this.player, this.layers["Gutter"]);
     }
 
+    // Setup colliders for the darklings group
+    if (this.layers["Ground"]) {
+      this.physics.add.collider(this.darklings, this.layers["Ground"]);
+    }
     if (this.layers["Platforms"]) {
-      this.physics.add.collider(this.player, this.layers["Platforms"]);
+      this.physics.add.collider(this.darklings, this.layers["Platforms"]);
+    }
+    if (this.layers["Gutter"]) {
+      this.physics.add.collider(this.darklings, this.layers["Gutter"]);
     }
 
     this.camera.setBounds(
@@ -272,5 +331,11 @@ export class BaseScene extends Scene {
     }
 
     this.player?.update?.();
+
+    this.darklings.children.iterate((child: Phaser.GameObjects.GameObject) => {
+      const darkling = child as Darkling;
+      darkling?.update?.();
+      return true;
+    });
   }
 }
