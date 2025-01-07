@@ -3,8 +3,11 @@ import { EventBus } from "../EventBus";
 import { Player } from "../classes/player";
 import Darkling from "../classes/darkling";
 import { PlayerHealthBar } from "../classes/HealthBar";
+import { PauseMenu } from "./PauseMenu";
 
 export class BaseScene extends Scene {
+  protected isPaused: boolean = false;
+  protected pauseMenu: PauseMenu;
   protected map!: Phaser.Tilemaps.Tilemap;
   protected layers: Record<string, Phaser.Tilemaps.TilemapLayer | null> = {};
   protected imageLayers: Record<string, GameObjects.TileSprite> = {};
@@ -15,7 +18,6 @@ export class BaseScene extends Scene {
   protected playerHealthBar!: PlayerHealthBar;
 
   protected camera!: Cameras.Scene2D.Camera;
-  private currentForm: "light" | "dark" = "light";
 
   constructor(key: string) {
     super(key);
@@ -31,7 +33,8 @@ export class BaseScene extends Scene {
     this.setupParallaxEffects();
     this.createFogLayers();
     EventBus.emit("current-scene-ready", this);
-    EventBus.on("transform-pressed", this.togglePlayerForm, this);
+    EventBus.on("pause-game", () => this.openPauseMenu());
+    EventBus.on("resume-game", () => this.closePauseMenu());
   }
 
   private setupCamera() {
@@ -171,17 +174,56 @@ export class BaseScene extends Scene {
       .setScale(2.0);
   }
 
-  private togglePlayerForm() {
-    this.currentForm = this.currentForm === "light" ? "dark" : "light";
+  protected togglePauseMenu(): void {
+    if (!this.isPaused) {
+      this.openPauseMenu();
+    } else {
+      this.closePauseMenu();
+    }
+  }
 
-    if (this.playerHealthBar) {
-      this.playerHealthBar.setForm(this.currentForm);
+  protected openPauseMenu(): void {
+    if (!this.isPaused) {
+      this.isPaused = true;
+      this.scene.pause();
+      this.sound?.pauseAll();
+
+      if (this.scene.isSleeping("PauseMenu")) {
+        this.scene.wake("PauseMenu", { parentSceneKey: this.scene.key });
+      } else {
+        this.scene.launch("PauseMenu", { parentSceneKey: this.scene.key });
+      }
+      this.scene.bringToTop("PauseMenu");
+    }
+  }
+
+  protected closePauseMenu(): void {
+    EventBus.off("pause-game");
+    EventBus.off("resume-game");
+
+    if (this.isPaused) {
+      this.isPaused = false;
+      this.scene.resume();
+      this.sound?.resumeAll(); // Resume all sounds
+
+      if (this.scene.get("PauseMenu")) {
+        this.scene.sleep("PauseMenu");
+      }
+
+      EventBus.emit("resume-game");
+      EventBus.emit("current-scene-ready", this);
+    }
+  }
+
+  shutdown() {
+    if (this.player) {
+      this.player.cleanup();
     }
   }
 
   private createPlayer() {
     const groundY = 530;
-    this.player = new Player(this, 100, groundY, "light");
+    this.player = new Player(this, 100, groundY, "light", this.playerHealthBar);
     if (this.player.body) {
       const body = this.player.body as Phaser.Physics.Arcade.Body;
       body.setSize(28, 51);
@@ -252,7 +294,7 @@ export class BaseScene extends Scene {
 
     // Create particle emitter manager
     this.particles = this.add.particles(0, 0, "particle", {
-      x: { min: 0, max: this.scale.width },
+      x: { min: 0, max: this.scale.width * 2 },
       y: { min: 0, max: this.scale.height },
       lifespan: { min: 2000, max: 4000 },
       speed: { min: 20, max: 40 },
@@ -330,7 +372,9 @@ export class BaseScene extends Scene {
       this.playerHealthBar.update(this.camera);
     }
 
-    this.player?.update?.();
+    if (!this.isPaused) {
+      this.player?.update();
+    }
 
     this.darklings.children.iterate((child: Phaser.GameObjects.GameObject) => {
       const darkling = child as Darkling;

@@ -10,9 +10,9 @@ export class CombatSystem {
   private playerSprite: Phaser.GameObjects.Sprite;
   private spawnTimer: Phaser.Time.TimerEvent;
   private checkDistanceTimer: Phaser.Time.TimerEvent;
-  private readonly CHASE_DISTANCE = 200;
+  private readonly CHASE_DISTANCE = 60;
   private readonly ATTACK_DISTANCE = 60;
-  private readonly DAMAGE_AMOUNT = 2;
+  private readonly DAMAGE_AMOUNT = 10;
   private isPlayerInvulnerable = false;
   private invulnerabilityDuration = 6000;
 

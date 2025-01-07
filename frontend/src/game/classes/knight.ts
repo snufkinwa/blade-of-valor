@@ -16,10 +16,21 @@ export class Knight extends Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    this.setVisible(false);
-
     this.initAnimations();
     this.setUpPhysics();
+  }
+
+  // Override setVisible to emit our custom event
+  setVisible(value: boolean): this {
+    super.setVisible(value);
+    // Emit our custom event after setting visibility
+    this.emit("knightVisibilityChange", value);
+    return this;
+  }
+
+  // Use the built-in visible property instead of isVisible
+  get isKnightVisible(): boolean {
+    return this.visible;
   }
 
   private initAnimations(): void {

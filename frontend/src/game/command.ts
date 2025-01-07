@@ -2,10 +2,16 @@ import { EventBus } from "./EventBus";
 
 type GameCommand = {
   GLOBAL: {
-    TUTORIAL: string;
+    PAUSEMENU: string;
     ESC: string;
+    F1: string;
   };
   MENU: {
+    ENTER: string;
+    UP: string;
+    DOWN: string;
+  };
+  PAUSEMENU: {
     ENTER: string;
     UP: string;
     DOWN: string;
@@ -34,13 +40,19 @@ type GameCommand = {
 
 export const GameCommands: GameCommand = {
   GLOBAL: {
-    TUTORIAL: "show-tutorial",
+    PAUSEMENU: "pause-game",
     ESC: "esc-key-pressed",
+    F1: "f1-key-pressed",
   },
   MENU: {
     ENTER: "enter-key-pressed",
     UP: "arrow-up-pressed",
     DOWN: "arrow-down-pressed",
+  },
+  PAUSEMENU: {
+    ENTER: "enter-pressed",
+    UP: "arrowup-pressed",
+    DOWN: "arrowdown-pressed",
   },
   GAMEPLAY: {
     MOVEMENT: {
@@ -70,6 +82,10 @@ export const setCurrentScene = (sceneName: string) => {
   currentScene = sceneName;
 };
 
+export const resetCurrentScene = () => {
+  currentScene = "MainMenu";
+};
+
 export const handleGameInput = (
   event: KeyboardEvent,
   isKeyUp = false
@@ -78,8 +94,12 @@ export const handleGameInput = (
 
   // Global commands that work everywhere
   if (!isKeyUp) {
-    if (key === "F1") EventBus.emit(GameCommands.GLOBAL.TUTORIAL);
+    if (key.toLowerCase() === "u") {
+      console.log(`Key pressed: ${key}`);
+      EventBus.emit(GameCommands.GLOBAL.PAUSEMENU);
+    }
     if (key === "Escape") EventBus.emit(GameCommands.GLOBAL.ESC);
+    if (key === "F1") EventBus.emit(GameCommands.GLOBAL.F1);
   }
 
   // Scene-specific commands
@@ -92,6 +112,14 @@ export const handleGameInput = (
       }
       break;
 
+    case "PauseMenu":
+      if (!isKeyUp) {
+        if (key === "Enter") EventBus.emit(GameCommands.PAUSEMENU.ENTER);
+        if (key === "ArrowUp") EventBus.emit(GameCommands.PAUSEMENU.UP);
+        if (key === "ArrowDown") EventBus.emit(GameCommands.PAUSEMENU.DOWN);
+        if (key === "Escape") EventBus.emit(GameCommands.GLOBAL.ESC);
+      }
+      break;
     case "IntroScene":
     case "Intro":
     case "Corruption":

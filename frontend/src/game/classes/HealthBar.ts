@@ -44,7 +44,7 @@ export class PlayerHealthBar extends BaseHealthBar {
   private healthStamina: Phaser.GameObjects.TileSprite;
   private crystal: Phaser.GameObjects.Sprite;
   private baseWidthDark: number = 43;
-  private baseWidthLight: number = 57;
+  public baseWidthLight: number = 57;
   private currentForm: "light" | "dark" = "light";
 
   constructor(
@@ -124,8 +124,7 @@ export class PlayerHealthBar extends BaseHealthBar {
       this.updateDarkBar();
 
       if (this.baseWidthLight === 0) {
-        console.log("Transforming to dark form!");
-        EventBus.emit("transform", "dark");
+        EventBus.emit("stamina-depleted");
         this.setForm("dark");
       }
     } else if (this.baseWidthDark > 0) {
@@ -230,13 +229,13 @@ export class BossHealthBar extends BaseHealthBar {
     }
   }
 
-  private showBossBar() {
+  public showBossBar() {
     this.isVisible = true;
     this.bossBar.setVisible(true);
     this.bossFill.setVisible(true);
   }
 
-  private hideBossBar() {
+  public hideBossBar() {
     this.isVisible = false;
     this.bossBar.setVisible(false);
     this.bossFill.setVisible(false);

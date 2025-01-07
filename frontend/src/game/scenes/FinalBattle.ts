@@ -29,12 +29,30 @@ export class FinalBattle extends BaseScene {
 
     const centerX = this.cameras.main.centerX;
     const screenHeight = this.cameras.main.height;
-    this.bossBar = new BossHealthBar(
-      this,
-      centerX, // x position centered
-      screenHeight - 50, // y position near bottom
-      "boss_healthbar",
-      "boss_bar"
+    if (this.knight && this.knight.visible) {
+      const centerX = this.cameras.main.centerX;
+      const screenHeight = this.cameras.main.height;
+      this.bossBar = new BossHealthBar(
+        this,
+        centerX,
+        screenHeight - 50,
+        "boss_healthbar",
+        "boss_bar"
+      );
+      // Initially hide the boss bar
+      this.bossBar.hideBossBar();
+    }
+
+    // Add visibility listener to knight
+    if (this.knight.isKnightVisible) {
+      this.bossBar.showBossBar();
+    }
+
+    // Add visibility change listener
+    this.knight.on(
+      "knightVisibilityChange",
+      this.onKnightVisibilityChange,
+      this
     );
 
     this.physics.add.existing(this.knight);
@@ -50,24 +68,28 @@ export class FinalBattle extends BaseScene {
     }
   }
 
+  private onKnightVisibilityChange = (visible: boolean): void => {
+    if (this.bossBar) {
+      this.bossBar.showBossBar();
+    }
+  };
+
   update() {
     super.update();
-
-    // Update boss health bar to stay fixed on screen
-    const centerX = this.cameras.main.centerX;
-    const screenHeight = this.cameras.main.height;
-
-    if (this.bossBar) {
-      this.bossBar.setPosition(centerX, screenHeight - 50);
-    }
 
     // Update knight if needed
     if (this.knight) {
       this.knight.update();
     }
-  }
 
+    // Update boss health bar position if it exists and knight is visible
+    if (this.bossBar && this.knight.visible) {
+      const centerX = this.cameras.main.centerX;
+      const screenHeight = this.cameras.main.height;
+      this.bossBar.setPosition(centerX, screenHeight - 50);
+    }
+  }
   changeScene() {
-    this.scene.start("Game Over");
+    this.scene.start("LightEnding");
   }
 }

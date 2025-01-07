@@ -138,4 +138,8 @@ export class Corruption extends BaseScene {
     );
     EventBus.removeListener("light-level-change", this.handleLightLevelChange);
   }
+
+  changeScene() {
+    this.scene.start("FinalBattle");
+  }
 }

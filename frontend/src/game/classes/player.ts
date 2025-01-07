@@ -1,5 +1,6 @@
 import { Physics } from "phaser";
 import { EventBus } from "../EventBus";
+import { PlayerHealthBar } from "./HealthBar";
 
 type ActionType = {
   type: "attack" | "jump" | "dash" | "roll" | "run" | "transform";
@@ -14,6 +15,11 @@ export class Player extends Physics.Arcade.Sprite {
   private fallThreshold = 30;
   private attackQueue: string[] = [];
   private isProcessingAttacks = false;
+  private healthBar: PlayerHealthBar;
+  private _previousVelocityX: number = 0;
+  private _previousVelocityY: number = 0;
+  private eventListeners: { event: string; handler: Function }[] = [];
+  private isPaused: boolean = false;
 
   private moveState = {
     isRunning: false,
@@ -34,12 +40,15 @@ export class Player extends Physics.Arcade.Sprite {
     scene: Phaser.Scene,
     x: number,
     y: number,
-    texture: "light" | "dark"
+    texture: "light" | "dark",
+    healthBar: PlayerHealthBar
   ) {
     super(scene, x, y, texture);
     this.currentForm = texture;
     scene.add.existing(this);
     scene.physics.add.existing(this);
+
+    this.healthBar = healthBar;
 
     const body = this.body as Physics.Arcade.Body;
     if (body) {
@@ -49,6 +58,26 @@ export class Player extends Physics.Arcade.Sprite {
 
     this.setupAnimations(scene, texture);
     this.setupControls();
+  }
+
+  public setVelocityX(velocity: number): this {
+    const body = this.body as Physics.Arcade.Body;
+    if (!body) {
+      console.warn("Attempting to set velocity without a physics body");
+      return this;
+    }
+    body.setVelocityX(velocity);
+    return this;
+  }
+
+  public setVelocityY(velocity: number): this {
+    const body = this.body as Physics.Arcade.Body;
+    if (!body) {
+      console.warn("Attempting to set velocity without a physics body");
+      return this;
+    }
+    body.setVelocityY(velocity);
+    return this;
   }
 
   private setupAnimations(scene: Phaser.Scene, texture: string): void {
@@ -95,73 +124,170 @@ export class Player extends Physics.Arcade.Sprite {
   }
 
   private setupControls(): void {
-    EventBus.on("run-pressed", (key: string) => {
-      if (this.moveState.isRolling || this.moveState.isTransforming) return;
-
-      this.moveState.isRunning = true;
-      const velocity =
-        key === "ArrowLeft" ? -this.RUN_VELOCITY : this.RUN_VELOCITY;
-      this.setVelocityX(velocity);
-      this.setFlipX(velocity < 0);
-      if (!this.moveState.isJumping && !this.moveState.isFalling) {
-        this.play("run", true);
-      }
-    });
-
-    EventBus.on("run-released", () => {
-      this.moveState.isRunning = false;
-      if (!this.moveState.isDashing && !this.moveState.isRolling) {
-        this.setVelocityX(0);
-        if (!this.moveState.isJumping && !this.moveState.isFalling) {
-          this.play("idle", true);
-        }
-      }
-    });
-
-    EventBus.on("jump-pressed", () => {
-      if (
-        this.jumpCount < this.maxJumps &&
-        !this.moveState.isRolling &&
-        !this.moveState.isTransforming
-      ) {
-        this.moveState.isJumping = true;
-        this.moveState.isFalling = false;
-        this.jumpCount++;
-        this.setVelocityY(this.JUMP_VELOCITY);
-        this.anims.stop();
-        this.play("jump", true);
-      }
-    });
-
-    EventBus.on("attack-1-pressed", () => this.queueAttack("attack1"));
-    EventBus.on("attack-2-pressed", () => this.queueAttack("attack2"));
-    EventBus.on("attack-3-pressed", () => this.queueAttack("attack3"));
-
-    EventBus.on("dash-pressed", () => this.handleDash());
-    EventBus.on("dash-released", () => {
-      if (this.moveState.isDashing) {
-        this.moveState.isDashing = false;
-        this.setVelocityX(0);
-        if (!this.moveState.isJumping && !this.moveState.isFalling) {
-          this.play("idle", true);
-        }
-      }
-    });
-
-    EventBus.on("roll-pressed", () => this.handleRoll());
-    EventBus.on("recover-balance", () => {
-      if (this.moveState.isRolling) {
-        this.setVelocityX(0);
-        this.play("recoverBalance", true).once("animationcomplete", () => {
-          this.moveState.isRolling = false;
+    const listeners = [
+      {
+        event: "run-pressed",
+        handler: (key: string) => {
+          if (
+            this.isPaused ||
+            this.moveState.isRolling ||
+            this.moveState.isTransforming
+          )
+            return;
+          this.moveState.isRunning = true;
+          const velocity =
+            key === "ArrowLeft" ? -this.RUN_VELOCITY : this.RUN_VELOCITY;
+          this.setVelocityX(velocity);
+          this.setFlipX(velocity < 0);
           if (!this.moveState.isJumping && !this.moveState.isFalling) {
-            this.play("idle", true);
+            this.play("run", true);
           }
-        });
-      }
-    });
+        },
+      },
+      {
+        event: "run-released",
+        handler: () => {
+          if (this.isPaused) return;
+          this.moveState.isRunning = false;
+          if (!this.moveState.isDashing && !this.moveState.isRolling) {
+            this.setVelocityX(0);
+            if (!this.moveState.isJumping && !this.moveState.isFalling) {
+              this.play("idle", true);
+            }
+          }
+        },
+      },
+      {
+        event: "jump-pressed",
+        handler: () => {
+          if (this.isPaused) return;
+          if (
+            this.jumpCount < this.maxJumps &&
+            !this.moveState.isRolling &&
+            !this.moveState.isTransforming
+          ) {
+            this.moveState.isJumping = true;
+            this.moveState.isFalling = false;
+            this.jumpCount++;
+            this.setVelocityY(this.JUMP_VELOCITY);
+            this.anims.stop();
+            this.play("jump", true);
+          }
+        },
+      },
+      {
+        event: "attack-1-pressed",
+        handler: () => {
+          if (this.isPaused) return;
+          this.queueAttack("attack1");
+        },
+      },
+      {
+        event: "attack-2-pressed",
+        handler: () => {
+          if (this.isPaused) return;
+          this.queueAttack("attack2");
+        },
+      },
+      {
+        event: "attack-3-pressed",
+        handler: () => {
+          if (this.isPaused) return;
+          this.queueAttack("attack3");
+        },
+      },
+      {
+        event: "dash-pressed",
+        handler: () => {
+          if (this.isPaused) return;
+          this.handleDash();
+        },
+      },
+      {
+        event: "dash-released",
+        handler: () => {
+          if (this.isPaused) return;
+          if (this.moveState.isDashing) {
+            this.moveState.isDashing = false;
+            this.setVelocityX(0);
+            if (!this.moveState.isJumping && !this.moveState.isFalling) {
+              this.play("idle", true);
+            }
+          }
+        },
+      },
+      {
+        event: "roll-pressed",
+        handler: () => {
+          if (this.isPaused) return;
+          this.handleRoll();
+        },
+      },
+      {
+        event: "recover-balance",
+        handler: () => {
+          if (this.isPaused) return;
+          if (this.moveState.isRolling) {
+            this.setVelocityX(0);
+            this.play("recoverBalance", true).once("animationcomplete", () => {
+              this.moveState.isRolling = false;
+              if (!this.moveState.isJumping && !this.moveState.isFalling) {
+                this.play("idle", true);
+              }
+            });
+          }
+        },
+      },
+      {
+        event: "transform-pressed",
+        handler: () => {
+          if (this.isPaused) return;
+          this.handleTransformRequest();
+        },
+      },
+      {
+        event: "stamina-depleted",
+        handler: () => {
+          if (this.isPaused) return;
+          this.handleTransform("dark");
+        },
+      },
+    ];
 
-    EventBus.on("transform-pressed", () => this.handleTransform());
+    // Register all listeners
+    listeners.forEach(({ event, handler }) => {
+      EventBus.on(event, handler);
+      this.eventListeners.push({ event, handler });
+    });
+  }
+
+  public pause(): void {
+    this.isPaused = true;
+    const body = this.body as Physics.Arcade.Body;
+    if (body) {
+      // Store current velocities if needed for resume
+      this._previousVelocityX = body.velocity.x;
+      this._previousVelocityY = body.velocity.y;
+      body.setVelocity(0, 0);
+    }
+    this.anims.pause();
+  }
+
+  public resume(): void {
+    this.isPaused = false;
+    const body = this.body as Physics.Arcade.Body;
+    if (body && this._previousVelocityX !== undefined) {
+      body.setVelocity(this._previousVelocityX, this._previousVelocityY);
+    }
+    this.anims.resume();
+  }
+
+  public cleanup(): void {
+    // Remove all event listeners
+    this.eventListeners.forEach(({ event, handler }) => {
+      EventBus.off(event, handler);
+    });
+    this.eventListeners = [];
   }
 
   private queueAttack(type: string): void {
@@ -238,27 +364,72 @@ export class Player extends Physics.Arcade.Sprite {
     }
   }
 
-  private handleTransform(): void {
-    if (!this.moveState.isTransforming && !this.moveState.isAttacking) {
-      this.moveState.isTransforming = true;
-      this.setVelocityX(0);
-      this.play("transformBefore", true).once("animationcomplete", () => {
-        this.currentForm = this.currentForm === "light" ? "dark" : "light";
-        this.setTexture(this.currentForm);
-        this.setupAnimations(this.scene, this.currentForm);
-        this.play("transformAfter", true).once("animationcomplete", () => {
-          this.moveState.isTransforming = false;
-          if (!this.moveState.isJumping && !this.moveState.isFalling) {
-            this.play("idle", true);
-          }
-        });
-      });
+  private handleTransformRequest(): void {
+    if (!this.healthBar) {
+      console.error("Health bar is not initialized!");
+      return; // Exit early to prevent further errors
     }
+
+    // Force transform to dark form if stamina is depleted
+    if (this.healthBar.baseWidthLight <= 0) {
+      if (this.currentForm === "light") {
+        this.handleTransform("dark");
+      }
+      return; // Prevent further transform attempts when stamina is depleted
+    }
+
+    // Normal transform logic when stamina is available
+    const targetForm = this.currentForm === "light" ? "dark" : "light";
+    this.handleTransform(targetForm);
+  }
+
+  private handleTransform(targetForm: "light" | "dark"): void {
+    if (
+      this.moveState.isTransforming ||
+      this.moveState.isAttacking ||
+      this.currentForm === targetForm
+    ) {
+      return;
+    }
+
+    this.moveState.isTransforming = true;
+    this.setVelocityX(0);
+    this.executeTransformPhase(targetForm);
+  }
+
+  private executeTransformPhase(targetForm: "light" | "dark"): void {
+    const handleAfterTransform = () => {
+      this.moveState.isTransforming = false;
+      if (!this.moveState.isJumping && !this.moveState.isFalling) {
+        this.play("idle", true);
+      }
+    };
+
+    const handleMainTransform = () => {
+      this.currentForm = targetForm;
+      this.setTexture(this.currentForm);
+      this.setupAnimations(this.scene, this.currentForm);
+      EventBus.emit("transform", targetForm);
+      this.play("transformAfter", true).once(
+        "animationcomplete",
+        handleAfterTransform
+      );
+    };
+
+    this.play("transformBefore", true).once(
+      "animationcomplete",
+      handleMainTransform
+    );
   }
 
   update(): void {
     const body = this.body as Physics.Arcade.Body;
-    if (!body) return;
+    if (!body || this.isPaused) return;
+
+    if (this.moveState.isAttacking || this.moveState.isTransforming) {
+      body.setVelocity(0);
+      return;
+    }
 
     // Handle jumping and falling based on vertical velocity
     if (body.velocity.y < 0) {
@@ -293,10 +464,5 @@ export class Player extends Physics.Arcade.Sprite {
         }
       }
     }
-  }
-
-  destroy(fromScene?: boolean): void {
-    EventBus.removeAllListeners();
-    super.destroy(fromScene);
   }
 }

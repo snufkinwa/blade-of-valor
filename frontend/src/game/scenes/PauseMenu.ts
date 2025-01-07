@@ -12,17 +12,25 @@ export class PauseMenu extends Scene {
     super({ key: "PauseMenu" });
   }
 
-  init(data: { parentScene?: Scene }) {
-    this.parentScene = data.parentScene || null;
+  init(data: { parentSceneKey?: string }) {
+    if (data.parentSceneKey) {
+      this.parentScene = this.scene.get(data.parentSceneKey);
+      console.log(
+        "PauseMenu initialized with parentSceneKey:",
+        data.parentSceneKey
+      );
+    } else {
+      console.warn("No parentSceneKey provided to PauseMenu.");
+    }
   }
 
   create() {
     this.setupBackground();
     this.setupMenu();
     EventBus.on("esc-key-pressed", () => this.closeMenu());
-    EventBus.on("arrow-up-pressed", () => this.changeSelection(-1));
-    EventBus.on("arrow-down-pressed", () => this.changeSelection(1));
-    EventBus.on("enter-key-pressed", () => this.handleSelect());
+    EventBus.on("arrowup-pressed", () => this.changeSelection(-1));
+    EventBus.on("arrowdown-pressed", () => this.changeSelection(1));
+    EventBus.on("enter-pressed", () => this.handleSelect());
     EventBus.emit("current-scene-ready", this);
   }
 
@@ -31,6 +39,11 @@ export class PauseMenu extends Scene {
       .rectangle(0, 0, this.scale.width, this.scale.height, 0x000000, 0.7)
       .setOrigin(0)
       .setDepth(1);
+  }
+
+  shutdown() {
+    this.events.off("wake");
+    this.events.off("sleep");
   }
 
   private setupMenu() {
@@ -81,22 +94,25 @@ export class PauseMenu extends Scene {
         this.closeMenu();
         break;
       case 1: // Quit
-        this.scene.start("MainMenu");
+        if (this.parentScene) {
+          this.scene.stop(); // Sleep pause menu first
+          this.scene.stop(this.parentScene.scene.key);
+          this.scene.start("MainMenu");
+        }
         break;
     }
   }
 
   private closeMenu() {
     if (this.parentScene) {
-      this.scene.resume(this.parentScene);
-    }
-    this.scene.stop();
-  }
+      EventBus.off("esc-key-pressed");
+      EventBus.off("arrowup-pressed");
+      EventBus.off("arrowdown-pressed");
+      EventBus.off("enter-pressed");
 
-  shutdown() {
-    EventBus.removeListener("esc-key-pressed");
-    EventBus.removeListener("arrow-up-pressed");
-    EventBus.removeListener("arrow-down-pressed");
-    EventBus.removeListener("enter-key-pressed");
+      // Resume parent and emit after cleanup
+      EventBus.emit("resume-game"); // Add this
+      this.scene.sleep();
+    }
   }
 }
