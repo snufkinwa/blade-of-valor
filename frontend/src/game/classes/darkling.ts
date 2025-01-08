@@ -2,6 +2,7 @@ import { Scene, Physics, GameObjects } from "phaser";
 import { EventBus } from "../EventBus";
 
 export default class Darkling extends Physics.Arcade.Sprite {
+  private hp: number = 100;
   private static readonly WAVE_DISTANCE = 20;
   private static readonly MAX_STACK_HEIGHT = 4;
 
@@ -42,6 +43,35 @@ export default class Darkling extends Physics.Arcade.Sprite {
 
   public setPlayer(player: Phaser.GameObjects.Sprite) {
     this.player = player;
+  }
+
+  public takeDamage(amount: number): void {
+    this.hp -= amount;
+    if (this.hp <= 0) {
+      this.hp = 0;
+      this.onDefeat();
+    } else {
+      this.hurt();
+    }
+  }
+
+  private onDefeat(): void {
+    this.isAttacking = false;
+    this.moveState.isAttacking = false;
+    const body = this.body as Physics.Arcade.Body;
+    if (body) {
+      body.setVelocity(0, 0);
+      body.setEnable(false);
+    }
+    EventBus.emit("darkling-defeated", this);
+  }
+
+  public isVulnerable(): boolean {
+    return this.hp > 0;
+  }
+
+  public isDefeated(): boolean {
+    return this.hp <= 0;
   }
 
   private initAnimations(): void {

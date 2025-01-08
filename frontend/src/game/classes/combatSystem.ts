@@ -2,15 +2,17 @@ import { Scene } from "phaser";
 import Darkling from "../classes/darkling";
 import { EventBus } from "../EventBus";
 import { OrbSystem } from "./orbs";
+import { PlayerHealthBar } from "./HealthBar";
 
 export class CombatSystem {
   private scene: Scene;
   private darklings: Darkling[] = [];
   private orbSystem: OrbSystem;
-  private playerSprite: Phaser.GameObjects.Sprite;
+  private player: Phaser.Physics.Arcade.Sprite;
+  private healthBar: PlayerHealthBar;
   private spawnTimer: Phaser.Time.TimerEvent;
   private checkDistanceTimer: Phaser.Time.TimerEvent;
-  private readonly CHASE_DISTANCE = 60;
+  private readonly CHASE_DISTANCE = 150;
   private readonly ATTACK_DISTANCE = 60;
   private readonly DAMAGE_AMOUNT = 10;
   private isPlayerInvulnerable = false;
@@ -18,11 +20,18 @@ export class CombatSystem {
 
   constructor(scene: Scene, playerSprite: Phaser.GameObjects.Sprite) {
     this.scene = scene;
-    this.playerSprite = playerSprite;
+    this.player = playerSprite as unknown as Phaser.Physics.Arcade.Sprite;
+    this.healthBar = this.healthBar;
     this.orbSystem = new OrbSystem(scene);
     this.setupEventListeners();
+    this.setupOrbSystem();
     this.startSpawning();
     this.startDistanceCheck();
+  }
+
+  private setupOrbSystem(): void {
+    this.orbSystem.setupCollisions();
+    this.orbSystem.setupPlayerCollision(this.player, this.healthBar);
   }
 
   private setupEventListeners(): void {
@@ -64,27 +73,27 @@ export class CombatSystem {
   }
 
   private spawnDarkling(): void {
-    if (!this.playerSprite || this.darklings.length >= 5) return;
+    if (!this.player || this.darklings.length >= 5) return;
 
-    const spawnX = this.playerSprite.x + Phaser.Math.Between(-30, 30);
-    const spawnY = this.playerSprite.y - 50;
+    const spawnX = this.player.x + Phaser.Math.Between(-30, 30);
+    const spawnY = this.player.y - 50;
 
     const darkling = new Darkling(this.scene, spawnX, spawnY);
     this.setupDarklingColliders(darkling);
-    darkling.setPlayer(this.playerSprite);
+    darkling.setPlayer(this.player);
 
     this.darklings.push(darkling);
   }
 
   private checkDarklingsDistance(): void {
-    if (!this.playerSprite) return;
+    if (!this.player) return;
 
     this.darklings.forEach((darkling) => {
       const distance = Phaser.Math.Distance.Between(
         darkling.x,
         darkling.y,
-        this.playerSprite.x,
-        this.playerSprite.y
+        this.player.x,
+        this.player.y
       );
 
       if (distance > this.CHASE_DISTANCE) {
@@ -93,15 +102,15 @@ export class CombatSystem {
         darkling.attack();
         this.handleDarklingAttack();
       } else {
-        const direction = this.playerSprite.x < darkling.x ? "left" : "right";
+        const direction = this.player.x < darkling.x ? "left" : "right";
         darkling.walk(direction);
       }
     });
   }
 
   private handleDarklingRespawn(darkling: Darkling): void {
-    const newX = this.playerSprite.x + Phaser.Math.Between(-50, 50);
-    const newY = this.playerSprite.y;
+    const newX = this.player.x + Phaser.Math.Between(-50, 50);
+    const newY = this.player.y;
 
     darkling.disappear(() => {
       darkling.respawn(newX, newY, () => {
@@ -119,13 +128,39 @@ export class CombatSystem {
         }
       });
     }
+
+    this.scene.physics.add.overlap(
+      this.player,
+      darkling,
+      (playerObj, darklingObj) => {
+        // Type check and cast objects
+        const player = playerObj as Phaser.GameObjects.Sprite;
+        const darklingEntity = darklingObj as Darkling;
+
+        if (darklingEntity instanceof Darkling) {
+          this.handlePlayerAttack(player, darklingEntity);
+        }
+      },
+      undefined,
+      this
+    );
   }
 
   private handleDarklingDefeat(darkling: Darkling): void {
     const index = this.darklings.indexOf(darkling);
     if (index > -1) {
+      this.orbSystem.spawnOrbsFromDarkling(darkling.x, darkling.y, true);
       this.darklings.splice(index, 1);
-      this.orbSystem.spawnOrbsFromDarkling(darkling.x, darkling.y);
+      darkling.destroy();
+    }
+  }
+
+  private handlePlayerAttack(
+    player: Phaser.GameObjects.Sprite,
+    darkling: Darkling
+  ): void {
+    if (darkling.isVulnerable()) {
+      darkling.takeDamage(20);
     }
   }
 

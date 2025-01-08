@@ -4,6 +4,7 @@ import { PlayerHealthBar } from "./HealthBar";
 
 export class Orb extends Physics.Arcade.Sprite {
   private isLarge: boolean;
+  private isDropping: boolean = false;
 
   constructor(scene: Scene, x: number, y: number, isLarge: boolean = false) {
     super(scene, x, y, "Orbs");
@@ -12,7 +13,7 @@ export class Orb extends Physics.Arcade.Sprite {
     scene.physics.add.existing(this);
 
     const body = this.body as Physics.Arcade.Body;
-    body.setSize(16, 16);
+    body.setSize(16, 10);
     body.setBounce(0.6);
     body.setCollideWorldBounds(true);
     body.setDrag(50);
@@ -20,14 +21,19 @@ export class Orb extends Physics.Arcade.Sprite {
     body.setFriction(0);
 
     this.initAnimation();
-    this.play(this.isLarge ? "large-orb-float" : "small-orb-float");
+    this.play("orb-drop").once("animationcomplete", () => {
+      this.isDropping = false;
+      this.play(this.isLarge ? "large-orb-float" : "small-orb-float");
+      this.scatter();
+    });
+    this.isDropping = true;
   }
 
   private initAnimation(): void {
     if (!this.scene.anims.exists("large-orb-float")) {
       this.scene.anims.create({
         key: "large-orb-float",
-        frames: this.scene.anims.generateFrameNames("Orbs", {
+        frames: this.scene.anims.generateFrameNames("collectOrbs", {
           start: 24,
           end: 31,
           prefix: "sprite",
@@ -40,7 +46,7 @@ export class Orb extends Physics.Arcade.Sprite {
     if (!this.scene.anims.exists("small-orb-float")) {
       this.scene.anims.create({
         key: "small-orb-float",
-        frames: this.scene.anims.generateFrameNames("Orbs", {
+        frames: this.scene.anims.generateFrameNames("collectOrbs", {
           start: 32,
           end: 39,
           prefix: "sprite",
@@ -49,9 +55,24 @@ export class Orb extends Physics.Arcade.Sprite {
         repeat: -1,
       });
     }
+
+    if (!this.scene.anims.exists("orb-drop")) {
+      this.scene.anims.create({
+        key: "orb-drop",
+        frames: this.scene.anims.generateFrameNames("Orbs", {
+          start: 1,
+          end: 7,
+          prefix: "sprite",
+        }),
+        frameRate: 10,
+        repeat: 0, // Play only once
+      });
+    }
   }
 
   scatter(): void {
+    if (this.isDropping) return;
+
     const angle = Phaser.Math.Between(-30, 30);
     const speed = Phaser.Math.Between(150, 250);
     const vx = Math.cos(Phaser.Math.DegToRad(angle)) * speed;
@@ -69,24 +90,23 @@ export class Orb extends Physics.Arcade.Sprite {
 export class OrbSystem {
   private scene: Scene;
   private orbs: Orb[] = [];
+  private playerHealthBar: PlayerHealthBar | null = null;
   private lightLevel: number = 0;
   private maxLight: number = 100;
 
   constructor(scene: Scene) {
     this.scene = scene;
-    this.setupGroundCollision();
   }
 
-  private setupGroundCollision(): void {
-    const platforms = this.scene.physics.add.staticGroup();
-    const ground = platforms
-      .create(0, this.scene.cameras.main.height - 10, "ground")
-      .setOrigin(0, 0)
-      .setDisplaySize(this.scene.cameras.main.width, 20)
-      .refreshBody();
-
-    ground.setAlpha(0);
-    this.scene.physics.add.collider(this.orbs, platforms);
+  setupCollisions(): void {
+    if ((this.scene as any).layers) {
+      ["Ground", "Platforms", "Gutter"].forEach((layerName) => {
+        const layer = (this.scene as any).layers[layerName];
+        if (layer) {
+          this.scene.physics.add.collider(this.orbs, layer);
+        }
+      });
+    }
   }
 
   spawnOrbs(
@@ -103,7 +123,6 @@ export class OrbSystem {
           true
         );
         this.orbs.push(orb);
-        orb.scatter();
       }
     }
 
@@ -116,9 +135,11 @@ export class OrbSystem {
           false
         );
         this.orbs.push(orb);
-        orb.scatter();
       }
     }
+
+    // Setup collisions for new orbs
+    this.setupCollisions();
   }
 
   spawnOrbsFromDarkling(x: number, y: number, isElite: boolean = false): void {
@@ -129,23 +150,40 @@ export class OrbSystem {
     }
   }
 
-  setupCollision(
+  setupPlayerCollision(
     target: Physics.Arcade.Sprite,
     healthBar: PlayerHealthBar
   ): void {
-    this.scene.physics.add.overlap(target, this.orbs, (obj1, obj2) => {
-      const orb = obj2 as Orb;
-      this.collectOrb(orb, healthBar);
-    });
+    if (!healthBar) {
+      console.error("HealthBar is undefined in setupPlayerCollision");
+      return;
+    }
+
+    console.log("Setting up player collision with orbs");
+    this.playerHealthBar = healthBar;
+
+    this.scene.physics.add.overlap(
+      target,
+      this.orbs,
+      (_, obj2) => {
+        const orb = obj2 as Orb;
+        console.log("Collision detected with orb");
+        if (this.playerHealthBar) {
+          this.collectOrb(orb, this.playerHealthBar);
+        }
+      },
+      undefined, // No additional collision check
+      this
+    );
   }
 
   private collectOrb(orb: Orb, healthBar: PlayerHealthBar): void {
     const index = this.orbs.indexOf(orb);
     if (index > -1) {
       this.orbs.splice(index, 1);
-      const healthIncrease = orb.isLargeOrb() ? 15 : 10;
-      healthBar.updateHealth(healthIncrease);
+      healthBar.collectOrb(); // Pass the orb to determine size
 
+      // Play collection effect
       this.scene.tweens.add({
         targets: orb,
         scale: { from: 1, to: 0 },
@@ -156,11 +194,6 @@ export class OrbSystem {
         },
       });
     }
-  }
-
-  private increaseLightLevel(amount: number): void {
-    this.lightLevel = Math.min(this.maxLight, this.lightLevel + amount);
-    EventBus.emit("light-level-change", this.lightLevel);
   }
 
   cleanup(): void {

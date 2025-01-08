@@ -7,7 +7,6 @@ import { Corruption as Middlegame } from "./scenes/CORRUPTION";
 import { FinalBattle as Endgame } from "./scenes/FinalBattle";
 import { MainMenu } from "./scenes/MainMenu";
 import { Tutorial } from "./scenes/Tutorial";
-import { PauseMenu } from "./scenes/PauseMenu";
 import { EchoesOfFailure } from "./scenes/EchoesOfFailure";
 import { AUTO, Game } from "phaser";
 import { Preloader } from "./scenes/Preloader";
@@ -31,7 +30,6 @@ const config: Phaser.Types.Core.GameConfig = {
     GameOver,
     LightEnding,
     Tutorial,
-    PauseMenu,
     EchoesOfFailure,
   ],
   physics: {

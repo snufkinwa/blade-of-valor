@@ -2,16 +2,10 @@ import { EventBus } from "./EventBus";
 
 type GameCommand = {
   GLOBAL: {
-    PAUSEMENU: string;
     ESC: string;
     F1: string;
   };
   MENU: {
-    ENTER: string;
-    UP: string;
-    DOWN: string;
-  };
-  PAUSEMENU: {
     ENTER: string;
     UP: string;
     DOWN: string;
@@ -40,7 +34,6 @@ type GameCommand = {
 
 export const GameCommands: GameCommand = {
   GLOBAL: {
-    PAUSEMENU: "pause-game",
     ESC: "esc-key-pressed",
     F1: "f1-key-pressed",
   },
@@ -48,11 +41,6 @@ export const GameCommands: GameCommand = {
     ENTER: "enter-key-pressed",
     UP: "arrow-up-pressed",
     DOWN: "arrow-down-pressed",
-  },
-  PAUSEMENU: {
-    ENTER: "enter-pressed",
-    UP: "arrowup-pressed",
-    DOWN: "arrowdown-pressed",
   },
   GAMEPLAY: {
     MOVEMENT: {
@@ -94,10 +82,6 @@ export const handleGameInput = (
 
   // Global commands that work everywhere
   if (!isKeyUp) {
-    if (key.toLowerCase() === "u") {
-      console.log(`Key pressed: ${key}`);
-      EventBus.emit(GameCommands.GLOBAL.PAUSEMENU);
-    }
     if (key === "Escape") EventBus.emit(GameCommands.GLOBAL.ESC);
     if (key === "F1") EventBus.emit(GameCommands.GLOBAL.F1);
   }
@@ -109,15 +93,6 @@ export const handleGameInput = (
         if (key === "Enter") EventBus.emit(GameCommands.MENU.ENTER);
         if (key === "ArrowUp") EventBus.emit(GameCommands.MENU.UP);
         if (key === "ArrowDown") EventBus.emit(GameCommands.MENU.DOWN);
-      }
-      break;
-
-    case "PauseMenu":
-      if (!isKeyUp) {
-        if (key === "Enter") EventBus.emit(GameCommands.PAUSEMENU.ENTER);
-        if (key === "ArrowUp") EventBus.emit(GameCommands.PAUSEMENU.UP);
-        if (key === "ArrowDown") EventBus.emit(GameCommands.PAUSEMENU.DOWN);
-        if (key === "Escape") EventBus.emit(GameCommands.GLOBAL.ESC);
       }
       break;
     case "IntroScene":

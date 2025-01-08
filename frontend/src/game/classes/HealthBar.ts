@@ -160,18 +160,31 @@ export class PlayerHealthBar extends BaseHealthBar {
   }
 
   public collectOrb(): void {
-    const baseOrbValue = 10;
+    const increase = 10;
+    console.log("Collecting orb, current form:", this.currentForm);
+    console.log(
+      "Before - Light:",
+      this.baseWidthLight,
+      "Dark:",
+      this.baseWidthDark
+    );
 
-    // Different healing amounts based on form
     if (this.currentForm === "light") {
-      // Light form heals more health but gains less darkness
-      this.setValue(this.currentHealth + baseOrbValue * 1.5);
-      this.setDarkLevel(this.darkLevel + baseOrbValue * 0.5);
+      this.baseWidthLight = Math.min(57, this.baseWidthLight + increase);
+      this.updateDarkBar();
+      console.log("Updated light width:", this.baseWidthLight);
     } else {
-      // Dark form gains more darkness but heals less health
-      this.setValue(this.currentHealth + baseOrbValue * 0.5);
-      this.setDarkLevel(this.darkLevel + baseOrbValue * 1.5);
+      this.baseWidthDark = Math.min(43, this.baseWidthDark + increase);
+      this.updateHealthBar();
+      console.log("Updated dark width:", this.baseWidthDark);
     }
+
+    console.log(
+      "After - Light:",
+      this.baseWidthLight,
+      "Dark:",
+      this.baseWidthDark
+    );
   }
 
   public setDarkLevel(value: number): void {

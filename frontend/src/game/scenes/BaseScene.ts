@@ -3,11 +3,8 @@ import { EventBus } from "../EventBus";
 import { Player } from "../classes/player";
 import Darkling from "../classes/darkling";
 import { PlayerHealthBar } from "../classes/HealthBar";
-import { PauseMenu } from "./PauseMenu";
 
 export class BaseScene extends Scene {
-  protected isPaused: boolean = false;
-  protected pauseMenu: PauseMenu;
   protected map!: Phaser.Tilemaps.Tilemap;
   protected layers: Record<string, Phaser.Tilemaps.TilemapLayer | null> = {};
   protected imageLayers: Record<string, GameObjects.TileSprite> = {};
@@ -33,8 +30,6 @@ export class BaseScene extends Scene {
     this.setupParallaxEffects();
     this.createFogLayers();
     EventBus.emit("current-scene-ready", this);
-    EventBus.on("pause-game", () => this.openPauseMenu());
-    EventBus.on("resume-game", () => this.closePauseMenu());
   }
 
   private setupCamera() {
@@ -172,47 +167,6 @@ export class BaseScene extends Scene {
       .setDepth(7)
       .setAlpha(1)
       .setScale(2.0);
-  }
-
-  protected togglePauseMenu(): void {
-    if (!this.isPaused) {
-      this.openPauseMenu();
-    } else {
-      this.closePauseMenu();
-    }
-  }
-
-  protected openPauseMenu(): void {
-    if (!this.isPaused) {
-      this.isPaused = true;
-      this.scene.pause();
-      this.sound?.pauseAll();
-
-      if (this.scene.isSleeping("PauseMenu")) {
-        this.scene.wake("PauseMenu", { parentSceneKey: this.scene.key });
-      } else {
-        this.scene.launch("PauseMenu", { parentSceneKey: this.scene.key });
-      }
-      this.scene.bringToTop("PauseMenu");
-    }
-  }
-
-  protected closePauseMenu(): void {
-    EventBus.off("pause-game");
-    EventBus.off("resume-game");
-
-    if (this.isPaused) {
-      this.isPaused = false;
-      this.scene.resume();
-      this.sound?.resumeAll(); // Resume all sounds
-
-      if (this.scene.get("PauseMenu")) {
-        this.scene.sleep("PauseMenu");
-      }
-
-      EventBus.emit("resume-game");
-      EventBus.emit("current-scene-ready", this);
-    }
   }
 
   shutdown() {
@@ -372,9 +326,7 @@ export class BaseScene extends Scene {
       this.playerHealthBar.update(this.camera);
     }
 
-    if (!this.isPaused) {
-      this.player?.update();
-    }
+    this.player?.update();
 
     this.darklings.children.iterate((child: Phaser.GameObjects.GameObject) => {
       const darkling = child as Darkling;
