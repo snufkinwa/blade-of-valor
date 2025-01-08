@@ -9,7 +9,7 @@ export class CombatSystem {
   private darklings: Darkling[] = [];
   private orbSystem: OrbSystem;
   private player: Phaser.Physics.Arcade.Sprite;
-  private healthBar: PlayerHealthBar;
+  private healthBar: PlayerHealthBar | null = null;
   private spawnTimer: Phaser.Time.TimerEvent;
   private checkDistanceTimer: Phaser.Time.TimerEvent;
   private readonly CHASE_DISTANCE = 150;
@@ -21,16 +21,16 @@ export class CombatSystem {
   constructor(scene: Scene, playerSprite: Phaser.GameObjects.Sprite) {
     this.scene = scene;
     this.player = playerSprite as unknown as Phaser.Physics.Arcade.Sprite;
-    this.healthBar = this.healthBar;
     this.orbSystem = new OrbSystem(scene);
+    this.orbSystem.setupCollision(playerSprite);
     this.setupEventListeners();
-    this.setupOrbSystem();
+    //this.setupOrbSystem();
     this.startSpawning();
     this.startDistanceCheck();
   }
 
-  private setupOrbSystem(): void {
-    this.orbSystem.setupCollisions();
+  setHealthBar(healthBar: PlayerHealthBar): void {
+    this.healthBar = healthBar;
     this.orbSystem.setupPlayerCollision(this.player, this.healthBar);
   }
 
@@ -120,6 +120,7 @@ export class CombatSystem {
   }
 
   private setupDarklingColliders(darkling: Phaser.GameObjects.Sprite): void {
+    // Setup layer collisions
     if ((this.scene as any).layers) {
       ["Ground", "Platforms", "Gutter"].forEach((layerName) => {
         const layer = (this.scene as any).layers[layerName];
@@ -129,20 +130,24 @@ export class CombatSystem {
       });
     }
 
-    this.scene.physics.add.overlap(
-      this.player,
-      darkling,
-      (playerObj, darklingObj) => {
-        // Type check and cast objects
-        const player = playerObj as Phaser.GameObjects.Sprite;
-        const darklingEntity = darklingObj as Darkling;
-
-        if (darklingEntity instanceof Darkling) {
-          this.handlePlayerAttack(player, darklingEntity);
-        }
-      },
-      undefined,
-      this
+    // Handle attacks
+    ["attack-1-pressed", "attack-2-pressed", "attack-3-pressed"].forEach(
+      (attackType) => {
+        EventBus.on(attackType, () => {
+          if (
+            Phaser.Math.Distance.Between(
+              this.player.x,
+              this.player.y,
+              darkling.x,
+              darkling.y
+            ) <= this.ATTACK_DISTANCE
+          ) {
+            if ((darkling as Darkling).isVulnerable()) {
+              (darkling as Darkling).takeDamage(20);
+            }
+          }
+        });
+      }
     );
   }
 

@@ -58,6 +58,7 @@ export class Player extends Physics.Arcade.Sprite {
 
     this.setupAnimations(scene, texture);
     this.setupControls();
+    console.log("Player State:", this.moveState, "Velocity:", body.velocity);
   }
 
   public setVelocityX(velocity: number): this {
@@ -293,9 +294,9 @@ export class Player extends Physics.Arcade.Sprite {
   private queueAttack(type: string): void {
     if (this.moveState.isRolling || this.moveState.isTransforming) return;
 
-    // Limit queue size to prevent memory issues
     if (this.attackQueue.length < 3) {
       this.attackQueue.push(type);
+      console.log("Attack added to queue:", this.attackQueue);
     }
 
     if (!this.isProcessingAttacks && !this.moveState.isAttacking) {
@@ -305,43 +306,48 @@ export class Player extends Physics.Arcade.Sprite {
 
   private processAttackQueue(): void {
     if (this.attackQueue.length === 0) {
+      console.log("Attack queue is empty.");
       this.isProcessingAttacks = false;
       this.moveState.isAttacking = false;
       return;
     }
 
+    const nextAttack = this.attackQueue[0];
+    console.log("Processing attack:", nextAttack);
+
+    if (!this.anims.animationManager.exists(nextAttack)) {
+      console.error("Animation does not exist:", nextAttack);
+      this.attackQueue.shift();
+      this.processAttackQueue();
+      return;
+    }
+
     this.isProcessingAttacks = true;
     this.moveState.isAttacking = true;
-    const nextAttack = this.attackQueue[0];
 
-    // Clear any existing animation complete listeners
-    this.removeAllListeners(Phaser.Animations.Events.ANIMATION_COMPLETE);
+    this.play(nextAttack, true)
+      .on(Phaser.Animations.Events.ANIMATION_START, () => {
+        console.log("Animation started:", nextAttack);
+      })
+      .once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
+        console.log("Animation complete for:", nextAttack);
 
-    this.play(nextAttack, true).once(
-      Phaser.Animations.Events.ANIMATION_COMPLETE,
-      () => {
+        this.attackQueue.shift();
+
         if (this.attackQueue.length > 0) {
-          this.attackQueue.shift();
-        }
-
-        if (this.attackQueue.length > 0 && !this.moveState.isRolling) {
+          // Process next attack
           this.processAttackQueue();
         } else {
-          this.play("recoverBalance", true).once(
-            Phaser.Animations.Events.ANIMATION_COMPLETE,
-            () => {
-              this.isProcessingAttacks = false;
-              this.moveState.isAttacking = false;
-              this.attackQueue = [];
+          // Reset states after last attack
+          this.isProcessingAttacks = false;
+          this.moveState.isAttacking = false;
 
-              if (!this.moveState.isJumping && !this.moveState.isFalling) {
-                this.play("idle", true);
-              }
-            }
-          );
+          // Play idle animation if appropriate
+          if (!this.moveState.isJumping && !this.moveState.isFalling) {
+            this.play("idle", true);
+          }
         }
-      }
-    );
+      });
   }
 
   private handleDash(): void {
@@ -425,11 +431,6 @@ export class Player extends Physics.Arcade.Sprite {
   update(): void {
     const body = this.body as Physics.Arcade.Body;
     if (!body || this.isPaused) return;
-
-    if (this.moveState.isAttacking || this.moveState.isTransforming) {
-      body.setVelocity(0);
-      return;
-    }
 
     // Handle jumping and falling based on vertical velocity
     if (body.velocity.y < 0) {

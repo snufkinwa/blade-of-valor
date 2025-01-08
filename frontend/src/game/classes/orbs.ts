@@ -172,7 +172,7 @@ export class OrbSystem {
           this.collectOrb(orb, this.playerHealthBar);
         }
       },
-      undefined, // No additional collision check
+      undefined,
       this
     );
   }
@@ -181,7 +181,7 @@ export class OrbSystem {
     const index = this.orbs.indexOf(orb);
     if (index > -1) {
       this.orbs.splice(index, 1);
-      healthBar.collectOrb(); // Pass the orb to determine size
+      healthBar.collectOrb();
 
       // Play collection effect
       this.scene.tweens.add({
@@ -194,6 +194,21 @@ export class OrbSystem {
         },
       });
     }
+  }
+
+  public setupCollision(target: Phaser.GameObjects.Sprite): void {
+    this.scene.physics.add.overlap(
+      target,
+      this.orbs,
+      (_, orb) => {
+        const orbSprite = orb as Orb;
+        if (this.playerHealthBar) {
+          this.collectOrb(orbSprite, this.playerHealthBar);
+        }
+      },
+      undefined,
+      this
+    );
   }
 
   cleanup(): void {

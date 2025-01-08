@@ -93,6 +93,7 @@ export class Corruption extends BaseScene {
 
   private setUpCombatSystem() {
     const combatSystem = new CombatSystem(this, this.player);
+    combatSystem.setHealthBar(this.playerHealthBar);
   }
 
   private handlePlayerCorruption() {

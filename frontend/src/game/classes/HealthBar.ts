@@ -160,7 +160,7 @@ export class PlayerHealthBar extends BaseHealthBar {
   }
 
   public collectOrb(): void {
-    const increase = 10;
+    const increase = 5;
     console.log("Collecting orb, current form:", this.currentForm);
     console.log(
       "Before - Light:",

@@ -2,7 +2,7 @@ import { Scene, Physics, GameObjects } from "phaser";
 import { EventBus } from "../EventBus";
 
 export default class Darkling extends Physics.Arcade.Sprite {
-  private hp: number = 100;
+  private hp: number = 200;
   private static readonly WAVE_DISTANCE = 20;
   private static readonly MAX_STACK_HEIGHT = 4;
 
@@ -53,6 +53,10 @@ export default class Darkling extends Physics.Arcade.Sprite {
     } else {
       this.hurt();
     }
+  }
+
+  public getHealth() {
+    return this.hp;
   }
 
   private onDefeat(): void {
