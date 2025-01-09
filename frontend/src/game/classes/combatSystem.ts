@@ -24,7 +24,6 @@ export class CombatSystem {
     this.orbSystem = new OrbSystem(scene);
     this.orbSystem.setupCollision(playerSprite);
     this.setupEventListeners();
-    //this.setupOrbSystem();
     this.startSpawning();
     this.startDistanceCheck();
   }
@@ -157,15 +156,6 @@ export class CombatSystem {
       this.orbSystem.spawnOrbsFromDarkling(darkling.x, darkling.y, true);
       this.darklings.splice(index, 1);
       darkling.destroy();
-    }
-  }
-
-  private handlePlayerAttack(
-    player: Phaser.GameObjects.Sprite,
-    darkling: Darkling
-  ): void {
-    if (darkling.isVulnerable()) {
-      darkling.takeDamage(20);
     }
   }
 

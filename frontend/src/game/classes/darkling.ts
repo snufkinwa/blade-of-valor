@@ -2,7 +2,7 @@ import { Scene, Physics, GameObjects } from "phaser";
 import { EventBus } from "../EventBus";
 
 export default class Darkling extends Physics.Arcade.Sprite {
-  private hp: number = 200;
+  public hp: number = 200;
   private static readonly WAVE_DISTANCE = 20;
   private static readonly MAX_STACK_HEIGHT = 4;
 

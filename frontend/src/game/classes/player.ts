@@ -2,10 +2,7 @@ import { Physics } from "phaser";
 import { EventBus } from "../EventBus";
 import { PlayerHealthBar } from "./HealthBar";
 
-type ActionType = {
-  type: "attack" | "jump" | "dash" | "roll" | "run" | "transform";
-  data?: any;
-};
+type AttackType = "attack1" | "attack2" | "attack3";
 
 export class Player extends Physics.Arcade.Sprite {
   protected hp: number = 100;
@@ -20,8 +17,9 @@ export class Player extends Physics.Arcade.Sprite {
   private _previousVelocityY: number = 0;
   private eventListeners: { event: string; handler: Function }[] = [];
   private isPaused: boolean = false;
+  private currentAttack: AttackType | null = null;
 
-  private moveState = {
+  public moveState = {
     isRunning: false,
     isJumping: false,
     isDashing: false,
@@ -108,12 +106,14 @@ export class Player extends Physics.Arcade.Sprite {
 
     animations.forEach(({ key, start, end, frameRate, repeat }) => {
       scene.anims.remove(key);
+      console.log("Creating animation:", key, { start, end });
       const frames = scene.anims.generateFrameNames(texture, {
         start,
         end,
         prefix: "sprite",
         zeroPad: 0,
       });
+      console.log("Generated frames:", frames);
 
       scene.anims.create({
         key,
@@ -121,144 +121,101 @@ export class Player extends Physics.Arcade.Sprite {
         frameRate,
         repeat,
       });
+      console.log(`Animation created: ${key}`, frames);
     });
   }
 
   private setupControls(): void {
-    const listeners = [
-      {
-        event: "run-pressed",
-        handler: (key: string) => {
-          if (
-            this.isPaused ||
-            this.moveState.isRolling ||
-            this.moveState.isTransforming
-          )
-            return;
-          this.moveState.isRunning = true;
-          const velocity =
-            key === "ArrowLeft" ? -this.RUN_VELOCITY : this.RUN_VELOCITY;
-          this.setVelocityX(velocity);
-          this.setFlipX(velocity < 0);
-          if (!this.moveState.isJumping && !this.moveState.isFalling) {
-            this.play("run", true);
-          }
-        },
-      },
-      {
-        event: "run-released",
-        handler: () => {
-          if (this.isPaused) return;
-          this.moveState.isRunning = false;
-          if (!this.moveState.isDashing && !this.moveState.isRolling) {
-            this.setVelocityX(0);
-            if (!this.moveState.isJumping && !this.moveState.isFalling) {
-              this.play("idle", true);
-            }
-          }
-        },
-      },
-      {
-        event: "jump-pressed",
-        handler: () => {
-          if (this.isPaused) return;
-          if (
-            this.jumpCount < this.maxJumps &&
-            !this.moveState.isRolling &&
-            !this.moveState.isTransforming
-          ) {
-            this.moveState.isJumping = true;
-            this.moveState.isFalling = false;
-            this.jumpCount++;
-            this.setVelocityY(this.JUMP_VELOCITY);
-            this.anims.stop();
-            this.play("jump", true);
-          }
-        },
-      },
-      {
-        event: "attack-1-pressed",
-        handler: () => {
-          if (this.isPaused) return;
-          this.queueAttack("attack1");
-        },
-      },
-      {
-        event: "attack-2-pressed",
-        handler: () => {
-          if (this.isPaused) return;
-          this.queueAttack("attack2");
-        },
-      },
-      {
-        event: "attack-3-pressed",
-        handler: () => {
-          if (this.isPaused) return;
-          this.queueAttack("attack3");
-        },
-      },
-      {
-        event: "dash-pressed",
-        handler: () => {
-          if (this.isPaused) return;
-          this.handleDash();
-        },
-      },
-      {
-        event: "dash-released",
-        handler: () => {
-          if (this.isPaused) return;
-          if (this.moveState.isDashing) {
-            this.moveState.isDashing = false;
-            this.setVelocityX(0);
-            if (!this.moveState.isJumping && !this.moveState.isFalling) {
-              this.play("idle", true);
-            }
-          }
-        },
-      },
-      {
-        event: "roll-pressed",
-        handler: () => {
-          if (this.isPaused) return;
-          this.handleRoll();
-        },
-      },
-      {
-        event: "recover-balance",
-        handler: () => {
-          if (this.isPaused) return;
-          if (this.moveState.isRolling) {
-            this.setVelocityX(0);
-            this.play("recoverBalance", true).once("animationcomplete", () => {
-              this.moveState.isRolling = false;
-              if (!this.moveState.isJumping && !this.moveState.isFalling) {
-                this.play("idle", true);
-              }
-            });
-          }
-        },
-      },
-      {
-        event: "transform-pressed",
-        handler: () => {
-          if (this.isPaused) return;
-          this.handleTransformRequest();
-        },
-      },
-      {
-        event: "stamina-depleted",
-        handler: () => {
-          if (this.isPaused) return;
-          this.handleTransform("dark");
-        },
-      },
-    ];
+    EventBus.on("run-pressed", (key: string) => {
+      if (this.moveState.isRolling || this.moveState.isTransforming) return;
 
-    // Register all listeners
-    listeners.forEach(({ event, handler }) => {
-      EventBus.on(event, handler);
-      this.eventListeners.push({ event, handler });
+      this.moveState.isRunning = true;
+      const velocity =
+        key === "ArrowLeft" ? -this.RUN_VELOCITY : this.RUN_VELOCITY;
+      this.setVelocityX(velocity);
+      this.setFlipX(velocity < 0);
+
+      if (!this.moveState.isJumping && !this.moveState.isFalling) {
+        this.play("run", true);
+      }
+    });
+
+    EventBus.on("run-released", () => {
+      this.moveState.isRunning = false;
+      if (!this.moveState.isDashing && !this.moveState.isRolling) {
+        this.setVelocityX(0);
+        if (!this.moveState.isJumping && !this.moveState.isFalling) {
+          this.play("idle", true);
+        }
+      }
+    });
+
+    EventBus.on("jump-pressed", () => {
+      if (
+        this.jumpCount < this.maxJumps &&
+        !this.moveState.isRolling &&
+        !this.moveState.isTransforming
+      ) {
+        this.moveState.isJumping = true;
+        this.moveState.isFalling = false;
+        this.jumpCount++;
+        this.setVelocityY(this.JUMP_VELOCITY);
+        this.anims.stop();
+        this.play("jump", true);
+      }
+    });
+
+    EventBus.on("attack-1-pressed", () => {
+      console.log("EventBus: attack-1-pressed");
+      this.queueAttack("attack1");
+    });
+
+    EventBus.on("attack-2-pressed", () => {
+      console.log("EventBus: attack-2-pressed");
+      this.queueAttack("attack2");
+    });
+
+    EventBus.on("attack-3-pressed", () => {
+      console.log("EventBus: attack-3-pressed");
+      this.queueAttack("attack3");
+    });
+
+    EventBus.on("dash-pressed", () => {
+      this.handleDash();
+    });
+
+    EventBus.on("dash-released", () => {
+      if (this.moveState.isDashing) {
+        this.moveState.isDashing = false;
+        this.setVelocityX(0);
+        if (!this.moveState.isJumping && !this.moveState.isFalling) {
+          this.play("idle", true);
+        }
+      }
+    });
+
+    EventBus.on("roll-pressed", () => {
+      this.handleRoll();
+    });
+
+    EventBus.on("recover-balance", () => {
+      if (this.moveState.isRolling) {
+        this.setVelocityX(0);
+        this.play("recoverBalance", true).once("animationcomplete", () => {
+          this.moveState.isRolling = false;
+          if (!this.moveState.isJumping && !this.moveState.isFalling) {
+            this.play("idle", true);
+          }
+        });
+      }
+    });
+
+    EventBus.on("transform-pressed", () => {
+      this.handleTransformRequest();
+    });
+
+    EventBus.on("stamina-depleted", () => {
+      this.handleTransform("dark");
     });
   }
 
@@ -285,69 +242,34 @@ export class Player extends Physics.Arcade.Sprite {
 
   public cleanup(): void {
     // Remove all event listeners
-    this.eventListeners.forEach(({ event, handler }) => {
-      EventBus.off(event, handler);
-    });
-    this.eventListeners = [];
+    EventBus.removeAllListeners("run-pressed");
+    EventBus.removeAllListeners("run-released");
+    EventBus.removeAllListeners("jump-pressed");
+    EventBus.removeAllListeners("attack-1-pressed");
+    EventBus.removeAllListeners("attack-2-pressed");
+    EventBus.removeAllListeners("attack-3-pressed");
+    EventBus.removeAllListeners("dash-pressed");
+    EventBus.removeAllListeners("dash-released");
+    EventBus.removeAllListeners("roll-pressed");
+    EventBus.removeAllListeners("recover-balance");
+    EventBus.removeAllListeners("transform-pressed");
+    EventBus.removeAllListeners("stamina-depleted");
   }
 
-  private queueAttack(type: string): void {
-    if (this.moveState.isRolling || this.moveState.isTransforming) return;
+  private isAttacking = false;
 
-    if (this.attackQueue.length < 3) {
-      this.attackQueue.push(type);
-      console.log("Attack added to queue:", this.attackQueue);
-    }
-
-    if (!this.isProcessingAttacks && !this.moveState.isAttacking) {
-      this.processAttackQueue();
-    }
+  queueAttack(attackName: string) {
+    this.attackQueue.push(attackName);
+    this.processAttackQueue();
   }
 
-  private processAttackQueue(): void {
-    if (this.attackQueue.length === 0) {
-      console.log("Attack queue is empty.");
-      this.isProcessingAttacks = false;
-      this.moveState.isAttacking = false;
-      return;
+  processAttackQueue() {
+    if (this.attackQueue.length > 0) {
+      const attack = this.attackQueue.shift();
+      if (attack) {
+        this.play(attack); // Play the attack animation
+      }
     }
-
-    const nextAttack = this.attackQueue[0];
-    console.log("Processing attack:", nextAttack);
-
-    if (!this.anims.animationManager.exists(nextAttack)) {
-      console.error("Animation does not exist:", nextAttack);
-      this.attackQueue.shift();
-      this.processAttackQueue();
-      return;
-    }
-
-    this.isProcessingAttacks = true;
-    this.moveState.isAttacking = true;
-
-    this.play(nextAttack, true)
-      .on(Phaser.Animations.Events.ANIMATION_START, () => {
-        console.log("Animation started:", nextAttack);
-      })
-      .once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
-        console.log("Animation complete for:", nextAttack);
-
-        this.attackQueue.shift();
-
-        if (this.attackQueue.length > 0) {
-          // Process next attack
-          this.processAttackQueue();
-        } else {
-          // Reset states after last attack
-          this.isProcessingAttacks = false;
-          this.moveState.isAttacking = false;
-
-          // Play idle animation if appropriate
-          if (!this.moveState.isJumping && !this.moveState.isFalling) {
-            this.play("idle", true);
-          }
-        }
-      });
   }
 
   private handleDash(): void {
