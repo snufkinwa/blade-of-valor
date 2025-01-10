@@ -44,8 +44,6 @@ def test_valid_move(test_client):
         assert response["status"] == "success"
         assert "engine_move" in response
         assert "darkling_wave" in response
-        assert "darkness_stats" in response
-
 
 def test_game_cleanup_on_disconnect(test_client):
     with test_client.websocket_connect("/ws/test_game"):

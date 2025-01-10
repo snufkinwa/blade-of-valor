@@ -90,15 +90,20 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                         "message": "Test message received successfully.",
                     })
                 elif data["type"] == "move":
-                    result = game.make_move(data["move"], data.get("use_dark_power", False))
-                    wave = game.get_darkling_wave()
-                    stats = game.darkness_system.get_stats()
-
+                    # Now receiving health and darkling_count from frontend
+                    health = data.get("health", 100)
+                    darkling_count = data.get("darkling_count", 0)
+                    
+                    # Update darkness system with current state
+                    game.darkness_system.update_state(health, darkling_count)
+                    
+                    # Make move based on current state
+                    result = game.make_move()
+                    
                     await websocket.send_json({
                         "status": "success",
                         "engine_move": result,
-                        "darkling_wave": wave.dict(),
-                        "darkness_stats": stats.dict()
+                        "darkling_wave": game.get_darkling_wave().dict()
                     })
                 else:
                     await websocket.send_json({
