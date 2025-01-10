@@ -11,11 +11,20 @@ class DarknessSystem:
         
     def get_state(self) -> DarknessState:
         # Combined impact of low health and many darklings
-        darkness = ((100 - self.health) + (self.darkling_count * 10))/2
-        
-        if darkness < 25: return DarknessState.LIGHT
-        elif darkness < 50: return DarknessState.TWILIGHT  
-        elif darkness < 75: return DarknessState.SHADOW
+        darkness = ((100 - self.health) + (self.darkling_count * 10)) / 2
+        print(f"Health: {self.health}, Darkling Count: {self.darkling_count}, Darkness: {darkness}")
+
+        if darkness < 25:
+            print("Darkness State: LIGHT")
+            return DarknessState.LIGHT
+        elif darkness < 50:
+            print("Darkness State: TWILIGHT")
+            return DarknessState.TWILIGHT
+        elif darkness < 75:
+            print("Darkness State: SHADOW")
+            return DarknessState.SHADOW
+        print("Darkness State: VOID")
         return DarknessState.VOID
+
 
    

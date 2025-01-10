@@ -9,8 +9,12 @@ from core.darkness import DarknessSystem
 class DarkChessEngine:
     def __init__(self, stockfish_path: str = "/usr/local/bin/stockfish"):
         """Initialize the chess engine and game state."""
-        self.board = chess.Board()
-        self.engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
+        try:
+            self.board = chess.Board()
+            self.engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
+            print(f"Stockfish initialized successfully at {stockfish_path}")
+        except Exception as e:
+            print(f"Failed to initialize Stockfish: {e}")
         self.darkness_system = DarknessSystem()
         self.base_darkling_count = 3
 
@@ -22,7 +26,7 @@ class DarkChessEngine:
             DarknessState.SHADOW: 0.4,    
             DarknessState.VOID: 0.1       # Mostly random moves in void
         }
-        return state_weights[darkness_state]
+        return state_weights.get(darkness_state, 0.5) 
 
     def get_moves(self, darkness_state: DarknessState) -> list[chess.Move]:
         """
@@ -40,6 +44,7 @@ class DarkChessEngine:
 
         # Analyze position and retrieve multiple options
         try:
+            print(f"Analyzing position with Stockfish for darkness state: {darkness_state}")
             analysis = self.engine.analyse(
                 self.board,
                 chess.engine.Limit(depth=12),
@@ -48,25 +53,48 @@ class DarkChessEngine:
             moves = [
                 pv["pv"][0] for pv in analysis if "pv" in pv and pv["pv"][0] in legal_moves
             ]
+            print(f"Stockfish analysis complete. Moves: {moves}")
             return moves if moves else [choice(legal_moves)]
         except Exception as e:
             print(f"Analysis error: {e}")
             return [choice(legal_moves)]
 
-    def make_move(self) -> str:
-        """Make a move based on current darkness state"""
+    def make_move(self) -> dict:
+        """
+        Make a move based on current darkness state and return the result.
+        Includes checks for game termination states (checkmate or draw).
+        """
         darkness_state = self.darkness_system.get_state()
         moves = self.get_moves(darkness_state)
         chosen_move = choice(moves)
-        
+
         try:
             self.board.push(chosen_move)
         except ValueError as e:
             print(f"Illegal move error: {e}")
             chosen_move = choice(list(self.board.legal_moves))
             self.board.push(chosen_move)
-        
-        return chosen_move.uci()
+
+        # Check for game termination conditions
+        if self.board.is_checkmate():
+            return {
+                "status": "game_over",
+                "reason": "checkmate",
+                "move": chosen_move.uci()
+            }
+        elif self.board.is_stalemate() or self.board.is_insufficient_material() or self.board.is_seventyfive_moves():
+            return {
+                "status": "game_over",
+                "reason": "draw",
+                "move": chosen_move.uci()
+            }
+
+        # Continue game
+        return {
+            "status": "continue",
+            "move": chosen_move.uci()
+        }
+
 
     def get_darkling_wave(self) -> DarklingWave:
         """Generate darkling wave based on evaluation and current state"""

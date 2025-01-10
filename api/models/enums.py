@@ -6,7 +6,7 @@ class GamePhase(Enum):
     FINAL_BATTLE = 3
 
 class DarknessState(Enum):
-    Light = "light"
-    Twilight = "twilight"
-    Shadow = "shadow"
-    Void = "void"
+    LIGHT = "light"
+    TWILIGHT = "twilight"
+    SHADOW = "shadow"
+    VOID = "void"

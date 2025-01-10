@@ -64,17 +64,16 @@ async def root():
 @app.websocket("/ws/{game_id}")
 async def websocket_endpoint(websocket: WebSocket, game_id: str):
     try:
-        if len(game_manager.games) >= MAX_GAMES:
-            await websocket.close(code=1008, reason="Maximum number of concurrent games reached")
-            return
-
+        print(f"WebSocket connection established for game_id: {game_id}")
         await connection_manager.connect(game_id, websocket)
 
         if game_id not in game_manager.games:
+            print(f"Creating new game for game_id: {game_id}")
             game_manager.create_game(game_id)
 
         game = game_manager.get_game(game_id)
         if not game:
+            print("Failed to initialize game")
             await websocket.close(code=1011, reason="Failed to initialize game")
             return
 
@@ -93,12 +92,14 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                     # Now receiving health and darkling_count from frontend
                     health = data.get("health", 100)
                     darkling_count = data.get("darkling_count", 0)
-                    
+                    print(f"Processing move: Health={health}, Darkling Count={darkling_count}")
+
                     # Update darkness system with current state
                     game.darkness_system.update_state(health, darkling_count)
                     
                     # Make move based on current state
                     result = game.make_move()
+                    print(f"Engine move result: {result}")
                     
                     await websocket.send_json({
                         "status": "success",
@@ -124,7 +125,7 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                     "message": str(e)
                 })
             except Exception as e:
-                print(f"Error processing message: {e}")
+                print(f"Error processing message: {data}, Exception: {e}")
                 await websocket.send_json({
                     "status": "error",
                     "message": "Internal server error"
