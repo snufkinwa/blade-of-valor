@@ -43,6 +43,7 @@ export class Player extends Physics.Arcade.Sprite {
   ) {
     super(scene, x, y, texture);
     this.currentForm = texture;
+    this.healthBar = healthBar;
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
@@ -56,7 +57,20 @@ export class Player extends Physics.Arcade.Sprite {
 
     this.setupAnimations(scene, texture);
     this.setupControls();
-    console.log("Player State:", this.moveState, "Velocity:", body.velocity);
+    //console.log("Player State:", this.moveState, "Velocity:", body.velocity);
+    this.setupTransformHandling();
+  }
+
+  private setupTransformHandling(): void {
+    // Listen for stamina depletion from HealthBar
+    EventBus.on("stamina-depleted", () => {
+      this.handleFormChange("dark");
+    });
+
+    // Listen for light form restoration if needed
+    EventBus.on("light-restored", () => {
+      this.handleFormChange("light");
+    });
   }
 
   public setVelocityX(velocity: number): this {
@@ -288,6 +302,12 @@ export class Player extends Physics.Arcade.Sprite {
     }
   }
 
+  private handleFormChange(newForm: "light" | "dark"): void {
+    // Use our existing transform system
+    this.handleTransform(newForm);
+  }
+
+  // Transform-related methods for Player class
   private handleTransform(targetForm: "light" | "dark"): void {
     if (
       this.moveState.isTransforming ||
@@ -297,34 +317,52 @@ export class Player extends Physics.Arcade.Sprite {
       return;
     }
 
-    this.moveState.isTransforming = true;
-    this.setVelocityX(0);
-    this.executeTransformPhase(targetForm);
+    // Determine if we should do a quick or animated transform
+    const shouldQuickTransform = this.isInAction();
+    this.executeTransform(targetForm, shouldQuickTransform);
   }
 
-  private executeTransformPhase(targetForm: "light" | "dark"): void {
-    const handleAfterTransform = () => {
-      this.moveState.isTransforming = false;
-      if (!this.moveState.isJumping && !this.moveState.isFalling) {
-        this.play("idle", true);
-      }
-    };
-
-    const handleMainTransform = () => {
-      this.currentForm = targetForm;
-      this.setTexture(this.currentForm);
-      this.setupAnimations(this.scene, this.currentForm);
-      EventBus.emit("transform", targetForm);
-      this.play("transformAfter", true).once(
-        "animationcomplete",
-        handleAfterTransform
-      );
-    };
-
-    this.play("transformBefore", true).once(
-      "animationcomplete",
-      handleMainTransform
+  private isInAction(): boolean {
+    return (
+      this.moveState.isAttacking ||
+      this.moveState.isDashing ||
+      this.moveState.isRolling
     );
+  }
+
+  private executeTransform(
+    targetForm: "light" | "dark",
+    quickTransform: boolean = false
+  ): void {
+    if (quickTransform) {
+      this.applyTransform(targetForm);
+      return;
+    }
+
+    this.moveState.isTransforming = true;
+    this.setVelocityX(0);
+
+    // Start transform animation sequence
+    this.play("transformBefore", true).once("animationcomplete", () => {
+      this.applyTransform(targetForm);
+      this.play("transformAfter", true).once("animationcomplete", () => {
+        this.finishTransform();
+      });
+    });
+  }
+
+  private applyTransform(targetForm: "light" | "dark"): void {
+    this.currentForm = targetForm;
+    this.setTexture(targetForm);
+    this.setupAnimations(this.scene, targetForm);
+    EventBus.emit("transform-complete", targetForm);
+  }
+
+  private finishTransform(): void {
+    this.moveState.isTransforming = false;
+    if (!this.moveState.isJumping && !this.moveState.isFalling) {
+      this.play("idle", true);
+    }
   }
 
   update(): void {

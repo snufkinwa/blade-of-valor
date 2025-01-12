@@ -115,7 +115,6 @@ export const PhaserGame = forwardRef<IRefPhaserGame, IProps>(
       });
 
       const handleKeyDown = (event: KeyboardEvent) => handleGameInput(event);
-
       const handleKeyUp = (event: KeyboardEvent) =>
         handleGameInput(event, true);
 

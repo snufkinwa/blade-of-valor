@@ -124,7 +124,7 @@ export const handleGameInput = (
         }
       }
 
-      // Combat and transform controls (only on keydown)
+      // Combat controls (only on keydown)
       if (!isKeyUp) {
         if (key.toLowerCase() === "z")
           EventBus.emit(GameCommands.GAMEPLAY.COMBAT.ATTACK_1);
