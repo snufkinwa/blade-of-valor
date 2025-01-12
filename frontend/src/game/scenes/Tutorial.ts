@@ -21,7 +21,9 @@ export class Tutorial extends Scene {
   create() {
     this.setupBackground();
     this.setupPanel();
-    EventBus.on("esc-key-pressed", () => this.closeTutorial());
+    EventBus.on("esc-key-pressed", () => {
+      this.closeTutorial();
+    });
     EventBus.emit("current-scene-ready", this);
   }
 
@@ -64,8 +66,7 @@ export class Tutorial extends Scene {
           "X           -  Heavy Attack\n" +
           "C           -  Special Attack\n" +
           "Q           -  Dash\n" +
-          "R           -  Roll\n" +
-          "T           -  Transform",
+          "R           -  Roll",
         {
           fontSize: "16px",
           fontFamily: "Public Pixel",

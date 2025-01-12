@@ -49,7 +49,7 @@ export class MainMenu extends Scene {
       .setScale(1.1);
 
     // Menu options
-    const options = ["New Game", "Continue", "Tutorial"];
+    const options = ["New Game", "Quick Game", "Tutorial"];
     this.menuOptions = options.map((option, index) => {
       return this.add
         .text(centerX, 520 + index * 40, option, {

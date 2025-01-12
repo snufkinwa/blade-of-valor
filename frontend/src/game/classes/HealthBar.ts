@@ -38,7 +38,6 @@ class BaseHealthBar {
 export class PlayerHealthBar extends BaseHealthBar {
   private currentHealth: number = 100;
   private maxHealth: number = 100;
-  private darkLevel: number = 50;
   private background: Phaser.GameObjects.Sprite;
   private healthFill: Phaser.GameObjects.TileSprite;
   private healthStamina: Phaser.GameObjects.TileSprite;
@@ -161,23 +160,24 @@ export class PlayerHealthBar extends BaseHealthBar {
 
   public collectOrb(): void {
     const increase = 5;
-    console.log("Collecting orb, current form:", this.currentForm);
-    console.log(
-      "Before - Light:",
-      this.baseWidthLight,
-      "Dark:",
-      this.baseWidthDark
-    );
 
     if (this.currentForm === "light") {
-      this.baseWidthLight = Math.min(57, this.baseWidthLight + increase);
+      if (this.baseWidthLight < 57) {
+        this.baseWidthLight = Math.min(57, this.baseWidthLight + increase);
+      } else if (this.baseWidthDark < 43) {
+        this.baseWidthDark = Math.min(43, this.baseWidthDark + increase);
+      }
       this.updateDarkBar();
-      console.log("Updated light width:", this.baseWidthLight);
     } else {
-      this.baseWidthDark = Math.min(43, this.baseWidthDark + increase);
+      if (this.baseWidthDark < 43) {
+        this.baseWidthDark = Math.min(43, this.baseWidthDark + increase);
+      } else if (this.baseWidthLight < 57) {
+        this.baseWidthLight = Math.min(57, this.baseWidthLight + increase);
+      }
       this.updateHealthBar();
-      console.log("Updated dark width:", this.baseWidthDark);
     }
+
+    //this.updateForm();
 
     console.log(
       "After - Light:",
@@ -185,11 +185,6 @@ export class PlayerHealthBar extends BaseHealthBar {
       "Dark:",
       this.baseWidthDark
     );
-  }
-
-  public setDarkLevel(value: number): void {
-    this.darkLevel = Phaser.Math.Clamp(value, 0, 100);
-    this.updateDarkBar();
   }
 
   destroy() {

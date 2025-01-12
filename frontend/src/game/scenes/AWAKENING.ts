@@ -109,8 +109,9 @@ export class IntroScene extends BaseScene {
     this.physics.pause();
 
     if (this.player && this.introDarkling) {
-      this.player.setFlipX(this.player.x > this.introDarkling.x);
+      this.introDarkling.setFlipX(this.player.x > this.introDarkling.x);
       this.introDarkling.attack();
+      //Player needs to lookIntro then lookBlink animations.
 
       await new Promise((resolve) => setTimeout(resolve, 1000));
       await this.showDialogue("Elara", "The shadows... they're moving...");

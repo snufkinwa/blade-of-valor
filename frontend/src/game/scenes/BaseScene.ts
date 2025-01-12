@@ -89,11 +89,11 @@ export class BaseScene extends Scene {
     if (this.layers["Platforms"]) {
       this.layers["Platforms"].setCollisionByExclusion([-1]);
       // Debug: Show collision boxes
-      this.layers["Platforms"].renderDebug(this.add.graphics(), {
-        tileColor: null,
-        collidingTileColor: new Phaser.Display.Color(243, 134, 48, 128),
-        faceColor: new Phaser.Display.Color(40, 39, 37, 255),
-      });
+      // this.layers["Platforms"].renderDebug(this.add.graphics(), {
+      //   tileColor: null,
+      //   collidingTileColor: new Phaser.Display.Color(243, 134, 48, 128),
+      //   faceColor: new Phaser.Display.Color(40, 39, 37, 255),
+      // });
     }
 
     Object.values(this.layers).forEach((layer, index) => {

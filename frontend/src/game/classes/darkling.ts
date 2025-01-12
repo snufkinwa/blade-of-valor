@@ -230,22 +230,30 @@ export default class Darkling extends Physics.Arcade.Sprite {
 
   setWavePosition(index: number, baseY: number): this {
     this.waveIndex = index;
-    const row = Math.floor(index / Darkling.MAX_STACK_HEIGHT);
-    const stackPosition = index % Darkling.MAX_STACK_HEIGHT;
 
-    const xOffset = row * Darkling.WAVE_DISTANCE;
-    const yOffset = -stackPosition * (this.height * 0.5);
+    const row = Math.floor((Math.sqrt(1 + 8 * index) - 1) / 2);
+    const posInRow = index - (row * (row + 1)) / 2;
 
-    this.setPosition(this.x - xOffset, baseY + yOffset);
+    const xSpacing = 6; // Adjust for tighter clustering
+    const ySpacing = 30; // Rows grow vertically with consistent spacing
+
+    // Calculate position with slight randomness
+    const randomX = Math.sin(index * 0.5) * 2;
+    const randomY = Math.cos(index * 0.5) * 4;
+
+    const x = this.x - xSpacing * row - xSpacing * posInRow + randomX;
+    const y = baseY - ySpacing * row + randomY;
+
+    this.setPosition(x, y);
 
     const body = this.body as Physics.Arcade.Body;
     if (body) {
       body.setCollideWorldBounds(false);
-      if (stackPosition > 0) {
-        body.setAllowGravity(false);
-      }
+      body.setGravityY(0); // Hovering effect
+      body.setDrag(50); // Smooth movement
     }
 
+    this.setDepth(1000 - y);
     return this;
   }
 
@@ -271,14 +279,18 @@ export default class Darkling extends Physics.Arcade.Sprite {
   }
 
   private handleWaveMovement(body: Physics.Arcade.Body): void {
-    const baseSpeed = -450;
-    body.setVelocityX(baseSpeed);
+    const baseSpeed = -150; // Horizontal speed
+    const waveIndex = this.waveIndex || 0;
+    const time = this.scene.time.now;
 
-    const oscillation = Math.sin(this.scene.time.now / 500) * 2;
-    body.setVelocityY(oscillation);
+    // Emphasize vertical oscillation at wave peaks
+    const verticalOffset =
+      Math.sin((time + waveIndex * 100) / 500) * (this.y > 300 ? 8 : 3);
 
-    // Check if darkling has moved far enough into the scene to start AI behavior
-    if (this.x < this.scene.cameras.main.width - 100) {
+    body.setVelocity(baseSpeed, verticalOffset);
+    body.setAllowGravity(false);
+
+    if (this.x < this.scene.cameras.main.width - 150) {
       this.waveIndex = undefined;
       this.aiState = "idle";
       body.setCollideWorldBounds(true);

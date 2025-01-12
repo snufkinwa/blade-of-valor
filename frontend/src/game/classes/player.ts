@@ -210,10 +210,6 @@ export class Player extends Physics.Arcade.Sprite {
       }
     });
 
-    EventBus.on("transform-pressed", () => {
-      this.handleTransformRequest();
-    });
-
     EventBus.on("stamina-depleted", () => {
       this.handleTransform("dark");
     });
@@ -252,7 +248,7 @@ export class Player extends Physics.Arcade.Sprite {
     EventBus.removeAllListeners("dash-released");
     EventBus.removeAllListeners("roll-pressed");
     EventBus.removeAllListeners("recover-balance");
-    EventBus.removeAllListeners("transform-pressed");
+
     EventBus.removeAllListeners("stamina-depleted");
   }
 
@@ -290,25 +286,6 @@ export class Player extends Physics.Arcade.Sprite {
         EventBus.emit("recover-balance");
       });
     }
-  }
-
-  private handleTransformRequest(): void {
-    if (!this.healthBar) {
-      console.error("Health bar is not initialized!");
-      return; // Exit early to prevent further errors
-    }
-
-    // Force transform to dark form if stamina is depleted
-    if (this.healthBar.baseWidthLight <= 0) {
-      if (this.currentForm === "light") {
-        this.handleTransform("dark");
-      }
-      return; // Prevent further transform attempts when stamina is depleted
-    }
-
-    // Normal transform logic when stamina is available
-    const targetForm = this.currentForm === "light" ? "dark" : "light";
-    this.handleTransform(targetForm);
   }
 
   private handleTransform(targetForm: "light" | "dark"): void {

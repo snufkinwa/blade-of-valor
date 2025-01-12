@@ -114,13 +114,7 @@ export const PhaserGame = forwardRef<IRefPhaserGame, IProps>(
           EventBus.emit("darkling-wave", data.darkling_wave);
       });
 
-      const handleKeyDown = (event: KeyboardEvent) => {
-        if (event.key === "Escape") {
-          isPaused.current ? handleResumeGame() : handlePauseGame();
-        } else {
-          handleGameInput(event);
-        }
-      };
+      const handleKeyDown = (event: KeyboardEvent) => handleGameInput(event);
 
       const handleKeyUp = (event: KeyboardEvent) =>
         handleGameInput(event, true);

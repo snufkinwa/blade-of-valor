@@ -26,9 +26,6 @@ type GameCommand = {
       ATTACK_2: string;
       ATTACK_3: string;
     };
-    TRANSFORM: {
-      TOGGLE: string;
-    };
   };
 };
 
@@ -57,9 +54,6 @@ export const GameCommands: GameCommand = {
       ATTACK_1: "attack-1-pressed",
       ATTACK_2: "attack-2-pressed",
       ATTACK_3: "attack-3-pressed",
-    },
-    TRANSFORM: {
-      TOGGLE: "transform-pressed",
     },
   },
 };
@@ -138,8 +132,6 @@ export const handleGameInput = (
           EventBus.emit(GameCommands.GAMEPLAY.COMBAT.ATTACK_2);
         if (key.toLowerCase() === "c")
           EventBus.emit(GameCommands.GAMEPLAY.COMBAT.ATTACK_3);
-        if (key.toLowerCase() === "t")
-          EventBus.emit(GameCommands.GAMEPLAY.TRANSFORM.TOGGLE);
       }
       break;
   }
