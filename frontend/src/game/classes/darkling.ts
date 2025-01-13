@@ -228,18 +228,18 @@ export default class Darkling extends Physics.Arcade.Sprite {
     return this;
   }
 
-  setWavePosition(index: number, baseY: number): this {
+  public setWavePosition(index: number, baseY: number): this {
     this.waveIndex = index;
 
     const row = Math.floor((Math.sqrt(1 + 8 * index) - 1) / 2);
     const posInRow = index - (row * (row + 1)) / 2;
 
-    const xSpacing = 6; // Adjust for tighter clustering
-    const ySpacing = 30; // Rows grow vertically with consistent spacing
+    const xSpacing = 40; // More space between darklings for better visibility
+    const ySpacing = 20; // Reduced spacing for tighter rows
 
     // Calculate position with slight randomness
-    const randomX = Math.sin(index * 0.5) * 2;
-    const randomY = Math.cos(index * 0.5) * 4;
+    const randomX = Math.sin(index * 0.3) * 10;
+    const randomY = Math.cos(index * 0.3) * 5;
 
     const x = this.x - xSpacing * row - xSpacing * posInRow + randomX;
     const y = baseY - ySpacing * row + randomY;

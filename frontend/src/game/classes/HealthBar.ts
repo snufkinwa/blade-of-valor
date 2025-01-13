@@ -160,30 +160,46 @@ export class PlayerHealthBar extends BaseHealthBar {
 
   public collectOrb(): void {
     const increase = 5;
+    const prevForm = this.currentForm;
 
     if (this.currentForm === "light") {
       if (this.baseWidthLight < 57) {
         this.baseWidthLight = Math.min(57, this.baseWidthLight + increase);
+        this.updateDarkBar();
       } else if (this.baseWidthDark < 43) {
         this.baseWidthDark = Math.min(43, this.baseWidthDark + increase);
+        this.updateHealthBar();
       }
-      this.updateDarkBar();
     } else {
+      // Dark form
       if (this.baseWidthDark < 43) {
         this.baseWidthDark = Math.min(43, this.baseWidthDark + increase);
-      } else if (this.baseWidthLight < 57) {
+        this.updateHealthBar();
+      } else {
+        // Start filling light bar when dark is full
         this.baseWidthLight = Math.min(57, this.baseWidthLight + increase);
-      }
-      this.updateHealthBar();
-    }
+        this.updateDarkBar();
 
-    //this.updateForm();
+        // Check if we should transform back to light
+        if (this.baseWidthLight >= 30) {
+          // Threshold for switching back
+          this.setForm("light");
+          if (prevForm !== "light") {
+            EventBus.emit("light-restored");
+          }
+        }
+      }
+    }
 
     console.log(
       "After - Light:",
       this.baseWidthLight,
       "Dark:",
-      this.baseWidthDark
+      this.baseWidthDark,
+      "Form:",
+      this.currentForm,
+      "Previous Form:",
+      prevForm
     );
   }
 

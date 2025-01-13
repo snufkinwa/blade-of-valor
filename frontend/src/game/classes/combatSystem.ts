@@ -160,8 +160,8 @@ export class CombatSystem {
     const points: Phaser.Math.Vector2[] = [];
 
     for (let x = 0; x <= width; x += 20) {
-      const waveHeight = Math.sin(x * 0.04) * 100; // Higher amplitude for peaks
-      const baseOffset = height - waveHeight; // Base offset keeps lower parts stable
+      const waveHeight = Math.sin(x * 0.05) * 150;
+      const baseOffset = height - waveHeight;
       points.push(new Phaser.Math.Vector2(x, baseOffset));
     }
 
@@ -173,27 +173,27 @@ export class CombatSystem {
     this.darklings.forEach((darkling) => darkling.destroy());
     this.darklings = [];
 
-    const waveWidth = 400; // Wider wave for a smoother curve
-    const waveHeight = 200; // Initial vertical offset for spawning
+    const waveWidth = 400;
+    const waveHeight = 200;
     const spawnX = this.scene.cameras.main.width + 100;
-    const baseY = this.scene.cameras.main.height - 200; // Start below the screen
+    const baseY = this.scene.cameras.main.height - 200;
 
     const wavePath = this.createWavePath(waveWidth, waveHeight);
 
-    const numRows = 6;
-    const darklingPerRow = 8;
+    const numRows = 5; // Adjust for desired number of rows
+    const darklingPerRow = Math.ceil(waveWidth / 60); // More darklings for wider waves
     const totalDarklings = numRows * darklingPerRow;
 
     for (let i = 0; i < totalDarklings; i++) {
       const row = Math.floor(i / darklingPerRow);
       const col = i % darklingPerRow;
 
-      // Position along wave, with vertical emphasis at peaks
+      // Position along wave with vertical emphasis at peaks
       const t = col / (darklingPerRow - 1);
       const point = wavePath.getPoint(t);
 
       const x = spawnX + point.x;
-      const y = baseY + point.y - row * 20; // Add a climbing effect for rows
+      const y = baseY + point.y - row * 30; // Consistent vertical spacing
 
       const darkling = new Darkling(this.scene, x, y);
       this.setupDarklingColliders(darkling);
@@ -202,7 +202,6 @@ export class CombatSystem {
       this.darklings.push(darkling);
     }
   }
-
   private handleDarklingDefeat(darkling: Darkling): void {
     const index = this.darklings.indexOf(darkling);
     if (index > -1) {

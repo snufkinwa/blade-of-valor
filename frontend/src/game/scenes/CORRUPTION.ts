@@ -67,6 +67,6 @@ export class Corruption extends BaseScene {
   }
 
   changeScene() {
-    this.scene.start("FinalBattle");
+    this.scene.start("GameOver");
   }
 }

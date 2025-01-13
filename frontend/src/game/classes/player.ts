@@ -303,7 +303,6 @@ export class Player extends Physics.Arcade.Sprite {
   }
 
   private handleFormChange(newForm: "light" | "dark"): void {
-    // Use our existing transform system
     this.handleTransform(newForm);
   }
 
@@ -324,6 +323,7 @@ export class Player extends Physics.Arcade.Sprite {
 
   private isInAction(): boolean {
     return (
+      this.moveState.isRunning ||
       this.moveState.isAttacking ||
       this.moveState.isDashing ||
       this.moveState.isRolling
@@ -354,14 +354,41 @@ export class Player extends Physics.Arcade.Sprite {
   private applyTransform(targetForm: "light" | "dark"): void {
     this.currentForm = targetForm;
     this.setTexture(targetForm);
-    this.setupAnimations(this.scene, targetForm);
+
+    // Don't recreate animations if we're in the same form
+    if (this.texture.key !== targetForm) {
+      this.setupAnimations(this.scene, targetForm);
+    }
+
+    // Reset movement states to prevent lock
+    if (this.isInAction()) {
+      this.moveState.isRunning = false;
+      this.moveState.isAttacking = false;
+      this.moveState.isDashing = false;
+      this.moveState.isRolling = false;
+    }
+
     EventBus.emit("transform-complete", targetForm);
   }
 
   private finishTransform(): void {
     this.moveState.isTransforming = false;
+
+    // Reset all movement locks
+    Object.keys(this.moveState).forEach((key) => {
+      if (key !== "isJumping" && key !== "isFalling") {
+        this.moveState[key as keyof typeof this.moveState] = false;
+      }
+    });
+
     if (!this.moveState.isJumping && !this.moveState.isFalling) {
       this.play("idle", true);
+    }
+
+    // Reset velocity
+    const body = this.body as Physics.Arcade.Body;
+    if (body) {
+      body.setVelocity(0, body.velocity.y);
     }
   }
 
