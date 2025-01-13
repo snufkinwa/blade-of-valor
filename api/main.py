@@ -1,3 +1,5 @@
+import boto3
+from pydantic import BaseModel
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Dict
@@ -21,6 +23,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+leaderboard_table = dynamodb.Table('Leaderboard')
 
 # Connection Manager
 class ConnectionManager:
@@ -61,6 +66,43 @@ async def startup_event():
 async def root():
     return {"message": "Welcome to the Chess Game API"}
 
+class LeaderboardSubmission(BaseModel):
+    nickname: str
+    score: int
+
+@app.post("/submit_score")
+async def submit_score(submission: LeaderboardSubmission):
+    try:
+        response = leaderboard_table.get_item(Key={"nickname": submission.nickname})
+        if "Item" in response:
+            existing_score = response["Item"]["score"]
+            if submission.score > existing_score:
+                leaderboard_table.update_item(
+                    Key={"nickname": submission.nickname},
+                    UpdateExpression="SET score = :score",
+                    ExpressionAttributeValues={":score": submission.score},
+                )
+                return {"message": "Score updated successfully"}
+            else:
+                return {"message": "Existing score is higher. No update made."}
+        else:
+            leaderboard_table.put_item(
+                Item={"nickname": submission.nickname, "score": submission.score}
+            )
+            return {"message": "Score submitted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error submitting score: {str(e)}")
+
+@app.get("/leaderboard")
+async def get_leaderboard(limit: int = 10):
+    try:
+        response = leaderboard_table.scan()
+        items = response["Items"]
+        sorted_items = sorted(items, key=lambda x: x["score"], reverse=True)[:limit]
+        return sorted_items
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving leaderboard: {str(e)}")
+
 @app.websocket("/ws/{game_id}")
 async def websocket_endpoint(websocket: WebSocket, game_id: str):
     try:
@@ -77,30 +119,54 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
             await websocket.close(code=1011, reason="Failed to initialize game")
             return
 
-        while True:
+        game_over = False
+
+        while not game_over:
             try:
+                # Receive and validate incoming message
                 data = await websocket.receive_json()
                 connection_manager.last_activity[game_id] = datetime.now()
-                
-                if data["type"] == "test-message":
-                    await websocket.send_json({
-                        "status": "success",
-                        "type": "test-message",
-                        "message": "Test message received successfully.",
-                    })
-                elif data["type"] == "move":
-                    # Now receiving health and darkling_count from frontend
-                    health = data.get("health", 100)
-                    darkling_count = data.get("darkling_count", 0)
+                print(f"Received data: {data}")
+
+                if "type" not in data:
+                    await websocket.send_json({"status": "error", "message": "Missing 'type' field"})
+                    continue
+
+                if data["type"] == "move":
+                    # Validate required fields for 'move'
+                    if "health" not in data or "darkling_count" not in data:
+                        await websocket.send_json({
+                            "status": "error",
+                            "message": "Missing 'health' or 'darkling_count' in move request"
+                        })
+                        continue
+
+                    health = data["health"]
+                    darkling_count = data["darkling_count"]
                     print(f"Processing move: Health={health}, Darkling Count={darkling_count}")
 
-                    # Update darkness system with current state
+                    # Update darkness system and make a move
                     game.darkness_system.update_state(health, darkling_count)
-                    
-                    # Make move based on current state
                     result = game.make_move()
                     print(f"Engine move result: {result}")
-                    
+
+                    if result["status"] == "game_over":
+                        game_over = True
+                        score = game._get_position_evaluation()
+
+                        # Submit score to leaderboard
+                        nickname = data.get("nickname", f"Guest_{game_id}")
+                        await submit_score(LeaderboardSubmission(nickname=nickname, score=score))
+
+                        # Notify frontend of game over
+                        await websocket.send_json({
+                            "status": "game_over",
+                            "reason": result["reason"],
+                            "score": score
+                        })
+                        break
+
+                    # Send move result to frontend
                     await websocket.send_json({
                         "status": "success",
                         "engine_move": result,
@@ -109,34 +175,27 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                 else:
                     await websocket.send_json({
                         "status": "error",
-                        "message": "Invalid message type"
+                        "message": f"Invalid message type: {data['type']}"
                     })
 
             except WebSocketDisconnect:
+                print(f"Client disconnected: {game_id}")
                 break
-            except ValidationError:
-                await websocket.send_json({
-                    "status": "error",
-                    "message": "Invalid request format"
-                })
+            except ValidationError as e:
+                print(f"Validation error: {e}")
+                await websocket.send_json({"status": "error", "message": "Invalid request format"})
             except GameError as e:
-                await websocket.send_json({
-                    "status": "error",
-                    "message": str(e)
-                })
+                print(f"Game error: {e}")
+                await websocket.send_json({"status": "error", "message": str(e)})
             except Exception as e:
-                print(f"Error processing message: {data}, Exception: {e}")
-                await websocket.send_json({
-                    "status": "error",
-                    "message": "Internal server error"
-                })
+                print(f"Unexpected error: {e}")
+                await websocket.send_json({"status": "error", "message": "Internal server error"})
 
     except WebSocketDisconnect:
         print(f"Client disconnected: {game_id}")
     except Exception as e:
         print(f"WebSocket error: {e}")
     finally:
-        # Clean up resources in any case
         connection_manager.disconnect(game_id)
         game_manager.remove_game(game_id)
 

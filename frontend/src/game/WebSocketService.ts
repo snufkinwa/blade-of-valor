@@ -1,6 +1,8 @@
 import { PlayerHealthBar } from "./classes/HealthBar";
 import { EventBus } from "./EventBus";
 
+const WEBSOCKET_BASE_URL = "ws://localhost:5328/ws/";
+
 export class WebSocketService {
   private static instance: WebSocketService;
   private socket: WebSocket | null = null;
@@ -11,7 +13,7 @@ export class WebSocketService {
 
   private constructor(gameId: string) {
     this.gameId = gameId;
-    const backendUrl = `ws://localhost:5328/ws/${gameId}`;
+    const backendUrl = `${WEBSOCKET_BASE_URL}${gameId}`;
     this.socket = new WebSocket(backendUrl);
 
     this.socket.onopen = () => {
@@ -31,14 +33,14 @@ export class WebSocketService {
         console.error("Error from server:", data.message);
       } else if (data.status === "game_over") {
         console.log(`Game Over: ${data.reason}`);
-        this.stopMoveUpdates(); // Stop updates when the game is over
+        alert(`Game Over: ${data.reason}`);
+        this.cleanupSocket();
       }
     };
 
     this.socket.onclose = () => {
       console.log("WebSocket connection closed");
-      this.stopMoveUpdates(); // Clean up interval on close
-      this.socket = null;
+      this.cleanupSocket();
     };
 
     this.socket.onerror = (error) => {
@@ -46,14 +48,46 @@ export class WebSocketService {
     };
   }
 
+  private cleanupSocket(): void {
+    if (this.socket) {
+      this.stopMoveUpdates();
+      if (this.socket.readyState !== WebSocket.CLOSED) {
+        this.socket.close();
+      }
+      this.socket = null;
+    }
+  }
+
   private requestMove() {
     if (this.socket?.readyState === WebSocket.OPEN) {
+      // Validate required game objects
+      if (!this.playerHealthBar || !this.darklings) {
+        console.warn(
+          "Game objects not set. Using default values for health and darkling count."
+        );
+      }
+
+      // Prepare the message to send
       const message = {
         type: "move",
-        health: this.playerHealthBar?.getValue() || 100,
-        darkling_count: this.darklings?.countActive() || 0,
+        health: this.playerHealthBar?.getValue() || 100, // Fallback to 100 if null
+        darkling_count: this.darklings?.countActive() || 0, // Fallback to 0 if null
       };
-      console.log("Sending WebSocket message:", message);
+
+      // Debug log the message
+      console.log("Sending WebSocket message:", JSON.stringify(message));
+
+      // Validate the message before sending
+      if (
+        !message.type ||
+        typeof message.health !== "number" ||
+        typeof message.darkling_count !== "number"
+      ) {
+        console.error("Invalid message format:", message);
+        return;
+      }
+
+      // Send the message to the WebSocket server
       this.socket.send(JSON.stringify(message));
     }
   }

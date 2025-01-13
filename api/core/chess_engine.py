@@ -4,10 +4,11 @@ from random import random, choice
 from models.enums import DarknessState
 from models.entities import DarklingWave, GameState
 from core.darkness import DarknessSystem
+import time
 
 
 class DarkChessEngine:
-    def __init__(self, stockfish_path: str = "/usr/local/bin/stockfish"):
+    def __init__(self, stockfish_path: str = "/usr/local/bin/stockfish", time_limit: float = 0.05):
         """Initialize the chess engine and game state."""
         try:
             self.board = chess.Board()
@@ -17,6 +18,10 @@ class DarkChessEngine:
             print(f"Failed to initialize Stockfish: {e}")
         self.darkness_system = DarknessSystem()
         self.base_darkling_count = 3
+        self.time_limit = time_limit
+        self.remaining_time = {"player": time_limit, "opponent": time_limit}
+        self.start_time = None
+
 
     def calculate_move_quality(self, darkness_state: DarknessState) -> float:
         """Calculate the probability of selecting high-quality moves."""
@@ -27,6 +32,7 @@ class DarkChessEngine:
             DarknessState.VOID: 0.1       # Mostly random moves in void
         }
         return state_weights.get(darkness_state, 0.5) 
+        
 
     def get_moves(self, darkness_state: DarknessState) -> list[chess.Move]:
         """
@@ -47,7 +53,7 @@ class DarkChessEngine:
             print(f"Analyzing position with Stockfish for darkness state: {darkness_state}")
             analysis = self.engine.analyse(
                 self.board,
-                chess.engine.Limit(depth=12),
+                chess.engine.Limit(time=self.time_limit),  
                 multipv=3
             )
             moves = [

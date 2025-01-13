@@ -92,7 +92,6 @@ export const handleGameInput = (
     case "IntroScene":
     case "Intro":
     case "Corruption":
-    case "FinalBattle":
       // Movement controls
       if (key === "ArrowRight" || key === "ArrowLeft") {
         EventBus.emit(

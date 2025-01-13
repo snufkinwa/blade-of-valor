@@ -3,6 +3,8 @@ import { EventBus } from "../EventBus";
 import { Player } from "../classes/player";
 import Darkling from "../classes/darkling";
 import { PlayerHealthBar } from "../classes/HealthBar";
+import { BossHealthBar } from "../classes/HealthBar";
+import { Knight } from "../classes/knight";
 
 export class BaseScene extends Scene {
   protected map!: Phaser.Tilemaps.Tilemap;
@@ -11,6 +13,8 @@ export class BaseScene extends Scene {
   protected fogLayers: Record<string, GameObjects.TileSprite> = {};
   protected player!: Player;
   protected darklings!: Phaser.Physics.Arcade.Group;
+  private bossBar: BossHealthBar;
+  protected knight: Knight;
   protected particles!: Phaser.GameObjects.Particles.ParticleEmitter;
   protected playerHealthBar!: PlayerHealthBar;
 
@@ -25,6 +29,7 @@ export class BaseScene extends Scene {
     this.createBackgroundLayers();
     this.createPlayer();
     this.setupDarklings();
+    this.setupKnight();
     this.setupParticles();
     this.setupPhysics();
     this.setupParallaxEffects();
@@ -234,6 +239,59 @@ export class BaseScene extends Scene {
     return darkling;
   }
 
+  private setupKnight() {
+    this.knight = new Knight(this, 200, 530);
+    const body = this.knight.body as Phaser.Physics.Arcade.Body;
+    body.setCollideWorldBounds(true);
+    body.setSize(28, 70);
+
+    const centerX = this.cameras.main.centerX;
+    const screenHeight = this.cameras.main.height;
+    if (this.knight && this.knight.visible) {
+      const centerX = this.cameras.main.centerX;
+      const screenHeight = this.cameras.main.height;
+      this.bossBar = new BossHealthBar(
+        this,
+        centerX,
+        screenHeight - 50,
+        "boss_healthbar",
+        "boss_bar"
+      );
+      // Initially hide the boss bar
+      this.bossBar.hideBossBar();
+    }
+
+    // Add visibility listener to knight
+    if (this.knight.isKnightVisible) {
+      this.bossBar.showBossBar();
+    }
+
+    // Add visibility change listener
+    this.knight.on(
+      "knightVisibilityChange",
+      this.onKnightVisibilityChange,
+      this
+    );
+
+    this.physics.add.existing(this.knight);
+
+    if (this.layers["Ground"]) {
+      this.physics.add.collider(this.knight, this.layers["Ground"]);
+    }
+    if (this.layers["Platforms"]) {
+      this.physics.add.collider(this.knight, this.layers["Platforms"]);
+    }
+    if (this.layers["Gutter"]) {
+      this.physics.add.collider(this.knight, this.layers["Gutter"]);
+    }
+  }
+
+  private onKnightVisibilityChange = (visible: boolean): void => {
+    if (this.bossBar) {
+      this.bossBar.showBossBar();
+    }
+  };
+
   protected setupParticles(): void {
     const graphics = this.add.graphics();
     graphics.fillStyle(0xffffff, 1);
@@ -333,5 +391,17 @@ export class BaseScene extends Scene {
       darkling?.update?.();
       return true;
     });
+
+    // Update knight if needed
+    if (this.knight) {
+      this.knight.update();
+    }
+
+    // Update boss health bar position if it exists and knight is visible
+    if (this.bossBar && this.knight.visible) {
+      const centerX = this.cameras.main.centerX;
+      const screenHeight = this.cameras.main.height;
+      this.bossBar.setPosition(centerX, screenHeight - 50);
+    }
   }
 }

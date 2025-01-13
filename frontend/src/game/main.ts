@@ -4,7 +4,6 @@ import { LightEnding } from "./scenes/LightEnding";
 import { Intro } from "./scenes/Intro";
 import { IntroScene as Opening } from "./scenes/AWAKENING";
 import { Corruption as Middlegame } from "./scenes/CORRUPTION";
-import { FinalBattle as Endgame } from "./scenes/FinalBattle";
 import { MainMenu } from "./scenes/MainMenu";
 import { Tutorial } from "./scenes/Tutorial";
 import { EchoesOfFailure } from "./scenes/EchoesOfFailure";
@@ -26,7 +25,6 @@ const config: Phaser.Types.Core.GameConfig = {
     Intro,
     Opening,
     Middlegame,
-    Endgame,
     GameOver,
     LightEnding,
     Tutorial,
