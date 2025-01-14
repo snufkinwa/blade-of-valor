@@ -84,12 +84,24 @@ export class Preloader extends Scene {
       this.load.image(key, getAssetUrl(path));
     });
 
-    // UI Atlas
-    this.load.atlas(
-      "ui",
-      getAssetUrl("UI/scalable+screen/Variations/Type+2/Screen__4.png"),
-      getAssetUrl("data/dialoguebox.json")
-    );
+    const UIAtlases = {
+      ui: [
+        "UI/scalable+screen/Variations/Type+2/Screen__4.png",
+        "data/dialoguebox.json",
+      ],
+      broken_crystal_SFX: [
+        "data/brokencrystal_sfx.png",
+        "data/brokencrystal_sfx.json",
+      ],
+      crystal_sfx: [
+        "data/redandpurplecrystal_sfx.png",
+        "data/redandpurplecrystal_sfx.json",
+      ],
+    };
+
+    Object.entries(UIAtlases).forEach(([key, [png, json]]) => {
+      this.load.atlas(key, getAssetUrl(png), getAssetUrl(json));
+    });
   }
 
   private loadAudioAssets() {
@@ -100,6 +112,8 @@ export class Preloader extends Scene {
       sword_sfx_c: "audio/sword-slash-and-swing-185432.mp3",
       sword_sfx_x: "audio/sword-slide-44167.mp3",
       sword_sfx_z: "audio/draw-sword1-44724.mp3",
+      broken_crystal: "audio/breaking-glass-with-feet-45176.mp3",
+      crystal_sfx: "audio/fantasy_ui_button_6-102219.mp3",
       gamePlayTheme:
         "audio/atmosphere-dark-fantasy-dungeon-synthpiano-verse-248215.mp3",
     };

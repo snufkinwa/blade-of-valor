@@ -12,7 +12,6 @@ export class Player extends Physics.Arcade.Sprite {
   private fallThreshold = 30;
   private attackQueue: string[] = [];
   private isProcessingAttacks = false;
-  private healthBar: PlayerHealthBar;
   private _previousVelocityX: number = 0;
   private _previousVelocityY: number = 0;
   private eventListeners: { event: string; handler: Function }[] = [];
@@ -38,16 +37,12 @@ export class Player extends Physics.Arcade.Sprite {
     scene: Phaser.Scene,
     x: number,
     y: number,
-    texture: "light" | "dark",
-    healthBar: PlayerHealthBar
+    texture: "light" | "dark"
   ) {
     super(scene, x, y, texture);
     this.currentForm = texture;
-    this.healthBar = healthBar;
     scene.add.existing(this);
     scene.physics.add.existing(this);
-
-    this.healthBar = healthBar;
 
     const body = this.body as Physics.Arcade.Body;
     if (body) {
@@ -67,7 +62,7 @@ export class Player extends Physics.Arcade.Sprite {
       this.handleFormChange("dark");
     });
 
-    // Listen for light form restoration if needed
+    // Listen for light form restoration
     EventBus.on("light-restored", () => {
       this.handleFormChange("light");
     });
@@ -227,9 +222,7 @@ export class Player extends Physics.Arcade.Sprite {
       }
     });
 
-    EventBus.on("stamina-depleted", () => {
-      this.handleTransform("dark");
-    });
+    this.setupTransformHandling;
   }
 
   public pause(): void {
@@ -306,93 +299,12 @@ export class Player extends Physics.Arcade.Sprite {
   }
 
   private handleFormChange(newForm: "light" | "dark"): void {
-    this.handleTransform(newForm);
-  }
+    // Don't transform if we're already in that form
+    if (this.currentForm === newForm) return;
 
-  // Transform-related methods for Player class
-  private handleTransform(targetForm: "light" | "dark"): void {
-    if (
-      this.moveState.isTransforming ||
-      this.moveState.isAttacking ||
-      this.currentForm === targetForm
-    ) {
-      return;
-    }
-
-    // Determine if we should do a quick or animated transform
-    const shouldQuickTransform = this.isInAction();
-    this.executeTransform(targetForm, shouldQuickTransform);
-  }
-
-  private isInAction(): boolean {
-    return (
-      this.moveState.isRunning ||
-      this.moveState.isAttacking ||
-      this.moveState.isDashing ||
-      this.moveState.isRolling
-    );
-  }
-
-  private executeTransform(
-    targetForm: "light" | "dark",
-    quickTransform: boolean = false
-  ): void {
-    if (quickTransform) {
-      this.applyTransform(targetForm);
-      return;
-    }
-
-    this.moveState.isTransforming = true;
-    this.setVelocityX(0);
-
-    // Start transform animation sequence
-    this.play("transformBefore", true).once("animationcomplete", () => {
-      this.applyTransform(targetForm);
-      this.play("transformAfter", true).once("animationcomplete", () => {
-        this.finishTransform();
-      });
-    });
-  }
-
-  private applyTransform(targetForm: "light" | "dark"): void {
-    this.currentForm = targetForm;
-    this.setTexture(targetForm);
-
-    // Don't recreate animations if we're in the same form
-    if (this.texture.key !== targetForm) {
-      this.setupAnimations(this.scene, targetForm);
-    }
-
-    // Reset movement states to prevent lock
-    if (this.isInAction()) {
-      this.moveState.isRunning = false;
-      this.moveState.isAttacking = false;
-      this.moveState.isDashing = false;
-      this.moveState.isRolling = false;
-    }
-
-    EventBus.emit("transform-complete", targetForm);
-  }
-
-  private finishTransform(): void {
-    this.moveState.isTransforming = false;
-
-    // Reset all movement locks
-    Object.keys(this.moveState).forEach((key) => {
-      if (key !== "isJumping" && key !== "isFalling") {
-        this.moveState[key as keyof typeof this.moveState] = false;
-      }
-    });
-
-    if (!this.moveState.isJumping && !this.moveState.isFalling) {
-      this.play("idle", true);
-    }
-
-    // Reset velocity
-    const body = this.body as Physics.Arcade.Body;
-    if (body) {
-      body.setVelocity(0, body.velocity.y);
-    }
+    // Update player texture
+    this.currentForm = newForm;
+    this.setTexture(newForm);
   }
 
   update(): void {

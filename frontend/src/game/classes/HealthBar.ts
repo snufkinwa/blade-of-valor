@@ -42,9 +42,12 @@ export class PlayerHealthBar extends BaseHealthBar {
   private healthFill: Phaser.GameObjects.TileSprite;
   private healthStamina: Phaser.GameObjects.TileSprite;
   private crystal: Phaser.GameObjects.Sprite;
+  private crystalSFX: Phaser.GameObjects.Sprite;
   private baseWidthDark: number = 43;
   public baseWidthLight: number = 57;
   private currentForm: "light" | "dark" = "light";
+  private brokenCrystalSound: Phaser.Sound.BaseSound;
+  private crystalSFXSound: Phaser.Sound.BaseSound;
 
   constructor(
     scene: Phaser.Scene,
@@ -81,10 +84,23 @@ export class PlayerHealthBar extends BaseHealthBar {
     this.crystal = scene.add.sprite(30, 30, "crystal-light");
     this.crystal.setScale(2.2);
 
+    this.crystalSFX = scene.add.sprite(30, 30, "crystal_sfx");
+    this.crystalSFX.setScale(2.2).setVisible(false);
+
+    // Initialize animations
+    this.initializeAnimations(scene);
+
+    // Initialize sounds
+    this.brokenCrystalSound = scene.sound.add("broken_crystal", {
+      volume: 0.5,
+    });
+    this.crystalSFXSound = scene.sound.add("crystal_sfx", { volume: 0.3 });
+
     this.container.add([
       this.healthFill,
       this.healthStamina,
       this.crystal,
+      this.crystalSFX,
       this.background,
     ]);
 
@@ -96,10 +112,65 @@ export class PlayerHealthBar extends BaseHealthBar {
     });
   }
 
+  private initializeAnimations(scene: Phaser.Scene): void {
+    // Broken crystal animation
+    scene.anims.create({
+      key: "broken_crystal_anim",
+      frames: scene.anims.generateFrameNames("broken_crystal_SFX", {
+        prefix: "sprite",
+        start: 1,
+        end: 17,
+      }),
+      frameRate: 24,
+      repeat: 0,
+    });
+
+    // Dark crystal animation
+    scene.anims.create({
+      key: "dark_crystal_anim",
+      frames: scene.anims.generateFrameNames("crystal_sfx", {
+        prefix: "sprite",
+        start: 13,
+        end: 24,
+      }),
+      frameRate: 24,
+      repeat: 0,
+    });
+
+    // Light crystal animation
+    scene.anims.create({
+      key: "light_crystal_anim",
+      frames: scene.anims.generateFrameNames("crystal_sfx", {
+        prefix: "sprite",
+        start: 85,
+        end: 96,
+      }),
+      frameRate: 24,
+      repeat: 0,
+    });
+  }
+
+  private playCrystalSFX(animKey: string): void {
+    this.crystalSFX.setVisible(true);
+    this.crystalSFX.play(animKey);
+    this.crystalSFX.once("animationcomplete", () => {
+      this.crystalSFX.setVisible(false);
+    });
+  }
+
   setForm(form: "light" | "dark") {
+    const previousForm = this.currentForm;
     this.currentForm = form;
     const textureKey = form === "light" ? "crystal-light" : "crystal-dark";
     this.crystal.setTexture(textureKey);
+
+    // Play appropriate SFX animation and sound
+    if (previousForm !== form) {
+      const animKey =
+        form === "light" ? "light_crystal_anim" : "dark_crystal_anim";
+      this.playCrystalSFX(animKey);
+      this.crystalSFXSound.play();
+    }
   }
 
   public setValue(value: number): void {
@@ -113,6 +184,9 @@ export class PlayerHealthBar extends BaseHealthBar {
   }
 
   private applyDamage(damage: number): void {
+    console.log("Applying damage:", damage);
+    console.log("Current light width:", this.baseWidthLight);
+    console.log("Current dark width:", this.baseWidthDark);
     if (this.baseWidthLight > 0) {
       // Deplete light health (healthStamina) first
       this.baseWidthLight = Phaser.Math.Clamp(
@@ -123,10 +197,12 @@ export class PlayerHealthBar extends BaseHealthBar {
       this.updateDarkBar();
 
       if (this.baseWidthLight === 0) {
+        console.log("Light depleted, emitting stamina-depleted");
         EventBus.emit("stamina-depleted");
         this.setForm("dark");
       }
     } else if (this.baseWidthDark > 0) {
+      console.log("Dark depleted, setting broken crystal");
       // Only start depleting dark health (healthFill) after light is gone
       this.baseWidthDark = Phaser.Math.Clamp(
         this.baseWidthDark - damage,
@@ -137,6 +213,8 @@ export class PlayerHealthBar extends BaseHealthBar {
 
       if (this.baseWidthDark === 0) {
         this.crystal.setTexture("broken_crystal_dark");
+        this.playCrystalSFX("broken_crystal_anim");
+        this.brokenCrystalSound.play();
         EventBus.emit("player-depleted");
       }
     }
@@ -208,71 +286,9 @@ export class PlayerHealthBar extends BaseHealthBar {
     this.healthFill.destroy();
     this.healthStamina.destroy();
     this.crystal.destroy();
-    super.destroy();
-  }
-}
-
-// Boss health bar without stamina
-export class BossHealthBar extends BaseHealthBar {
-  private bossBar: Phaser.GameObjects.Sprite;
-  private bossFill: Phaser.GameObjects.TileSprite;
-
-  constructor(
-    scene: Phaser.Scene,
-    x: number,
-    y: number,
-    bossTexture: string,
-    bossFillTexture: string
-  ) {
-    super(scene, x, y);
-
-    this.bossBar = scene.add.sprite(0, 0, bossTexture);
-
-    this.bossFill = scene.add.tileSprite(9, 20, 205, 9, bossFillTexture);
-
-    this.bossBar.setOrigin(0, 0);
-    this.bossBar.setScale(1.5);
-    this.bossFill.setOrigin(0, 0);
-
-    this.container.add([this.bossFill, this.bossBar]);
-    this.updateBar();
-  }
-
-  update(
-    camera: Phaser.Cameras.Scene2D.Camera,
-    knight?: Phaser.GameObjects.Sprite
-  ) {
-    super.update(camera);
-    if (knight) {
-      const knightVisible = camera.worldView.contains(knight.x, knight.y);
-      if (knightVisible && !this.isVisible) {
-        this.showBossBar();
-      } else if (!knightVisible && this.isVisible) {
-        this.hideBossBar();
-      }
-    }
-  }
-
-  public showBossBar() {
-    this.isVisible = true;
-    this.bossBar.setVisible(true);
-    this.bossFill.setVisible(true);
-  }
-
-  public hideBossBar() {
-    this.isVisible = false;
-    this.bossBar.setVisible(false);
-    this.bossFill.setVisible(false);
-  }
-
-  protected updateBar() {
-    const fillWidth = this.value / 100;
-    this.bossFill.setScale(fillWidth, 1);
-  }
-
-  destroy() {
-    this.bossBar.destroy();
-    this.bossFill.destroy();
+    this.crystalSFX.destroy();
+    this.brokenCrystalSound.destroy();
+    this.crystalSFXSound.destroy();
     super.destroy();
   }
 }

@@ -114,6 +114,16 @@ export const PhaserGame = forwardRef<IRefPhaserGame, IProps>(
           EventBus.emit("darkling-wave", data.darkling_wave);
       });
 
+      EventBus.on("stamina-depleted", () => {
+        console.log("Stamina depleted event received in PhaserGame");
+        EventBus.emit("form-changed", "dark");
+      });
+
+      EventBus.on("light-restored", () => {
+        console.log("Light restored event received in PhaserGame");
+        EventBus.emit("form-changed", "light");
+      });
+
       const handleKeyDown = (event: KeyboardEvent) => handleGameInput(event);
       const handleKeyUp = (event: KeyboardEvent) =>
         handleGameInput(event, true);
@@ -125,6 +135,9 @@ export const PhaserGame = forwardRef<IRefPhaserGame, IProps>(
         EventBus.removeListener("current-scene-ready", handleSceneChange);
         EventBus.removeListener("pause-game", handlePauseGame);
         EventBus.removeListener("resume-game", handleResumeGame);
+        EventBus.removeListener("stamina-depleted");
+        EventBus.removeListener("light-restored");
+        EventBus.removeListener("form-changed");
         EventBus.removeAllListeners();
         window.removeEventListener("keydown", handleKeyDown);
         window.removeEventListener("keyup", handleKeyUp);
