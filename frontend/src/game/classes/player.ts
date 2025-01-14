@@ -181,15 +181,18 @@ export class Player extends Physics.Arcade.Sprite {
 
     EventBus.on("attack-1-pressed", () => {
       console.log("EventBus: attack-1-pressed");
+      this.scene.sound.play("sword_sfx_z", { volume: 0.2, loop: false });
       this.queueAttack("attack1");
     });
 
     EventBus.on("attack-2-pressed", () => {
+      this.scene.sound.play("sword_sfx_x", { volume: 0.2, loop: false });
       console.log("EventBus: attack-2-pressed");
       this.queueAttack("attack2");
     });
 
     EventBus.on("attack-3-pressed", () => {
+      this.scene.sound.play("sword_sfx_c", { volume: 0.2, loop: false });
       console.log("EventBus: attack-3-pressed");
       this.queueAttack("attack3");
     });

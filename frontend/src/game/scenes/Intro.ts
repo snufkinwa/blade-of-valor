@@ -1,16 +1,20 @@
 import { EventBus } from "../EventBus";
 import { GameObjects, Scene } from "phaser";
-import Architect from "../classes/architect";
 
 export class Intro extends Scene {
-  private architect: Architect;
-  private dialogue: Array<{ speaker: string; line: string; portrait?: string }>;
+  private dialogue: Array<{ speaker: string; line: string }>;
   private dialogueIndex: number;
-  private dialoguePanel: GameObjects.NineSlice;
-  private speakerText: GameObjects.Text;
-  private dialogueText: GameObjects.Text;
+  private elaraPanel: GameObjects.NineSlice;
+  private architectPanel: GameObjects.NineSlice;
+  private elaraSpeakerText: GameObjects.Text;
+  private elaraDialogueText: GameObjects.Text;
+  private architectSpeakerText: GameObjects.Text;
+  private architectDialogueText: GameObjects.Text;
+  private elaraPortrait: GameObjects.Image;
+  private architectPortrait: GameObjects.Sprite;
   private isAnimatingPanel: boolean;
-  private portraitImage: GameObjects.Image;
+  private isNewGame: boolean;
+  private onIntroComplete: Function | null;
 
   constructor() {
     super("Intro");
@@ -18,11 +22,12 @@ export class Intro extends Scene {
     this.isAnimatingPanel = false;
   }
 
-  create() {
-    const centerX = this.cameras.main.centerX;
-    const centerY = this.cameras.main.centerY;
+  create(data: { isNewGame: boolean; onIntroComplete: null }) {
+    this.isNewGame = data.isNewGame || false;
+    this.onIntroComplete = data.onIntroComplete || null;
 
     EventBus.removeAllListeners("enter-key-pressed");
+
     // Load dialogue data
     const dialogueData = this.cache.json.get("dialogue");
     this.dialogue =
@@ -31,63 +36,89 @@ export class Intro extends Scene {
           cutscene.phase === "Opening Cutscene (Awakening Phase)"
       )?.dialogue || [];
 
-    // Create architect
-    this.architect = new Architect(this, centerX, 200);
-    this.architect.sprite.setScale(1.5);
+    // Create animations for Architect
+    this.anims.create({
+      key: "architect_talk",
+      frames: this.anims.generateFrameNames("architect_portrait", {
+        prefix: "sprite",
+        start: 72,
+        end: 101,
+      }),
+      frameRate: 15,
+      repeat: -1,
+    });
 
-    this.portraitImage = this.add
-      .image(840, 520, "elara_portrait")
+    // Create panels for Elara and Architect
+    this.elaraPanel = this.add
+      .nineslice(120, 100, "ui", "dialogueBox", 650, 200, 16, 16, 16, 16)
+      .setOrigin(0, 0)
+      .setAlpha(0);
+
+    this.architectPanel = this.add
+      .nineslice(200, 380, "ui", "dialogueBox", 650, 200, 16, 16, 16, 16)
+      .setOrigin(0, 0)
+      .setAlpha(0);
+
+    // Create portraits
+    this.elaraPortrait = this.add
+      .image(920, 200, "elara_portrait")
       .setOrigin(0.5)
       .setScale(0.6)
       .setDepth(1)
       .setAlpha(0);
 
-    // Create dialogue panel
-    this.dialoguePanel = this.add
-      .nineslice(
-        120, // x
-        475, // y
-        "ui", // texture
-        "dialogueBox", // frame
-        650, // width
-        225, // height
-        16, // left
-        16, // right
-        16, // top
-        16 // bottom
-      )
-      .setOrigin(0, 0)
+    this.architectPortrait = this.add
+      .sprite(140, 480, "architect_portrait", "sprite72")
+      .setOrigin(0.5)
+      .setScale(0.6)
       .setAlpha(0);
+
+    // Create a circular mask
+    const maskGraphics = this.add.graphics();
+    maskGraphics.beginPath();
+    maskGraphics.arc(140, 480, 60, 0, Math.PI * 2, false); // Circular mask with a radius of 75
+    maskGraphics.fill();
+
+    // Apply the mask to the architectPortrait
+    const mask = maskGraphics.createGeometryMask();
+    this.architectPortrait.setMask(mask);
 
     // Create text elements
-    this.speakerText = this.add
-      .text(140, 495, "", {
-        fontSize: "18px",
-        color: "#FFD700",
-        fontStyle: "bold",
-      })
-      .setAlpha(0);
+    this.elaraSpeakerText = this.addText(140, 120, "", 18, "#FFD700", "bold");
+    this.elaraDialogueText = this.addText(140, 150, "", 24, "#ffffff");
 
-    this.dialogueText = this.add
-      .text(140, 525, "", {
-        fontSize: "24px",
-        color: "#ffffff",
-        wordWrap: { width: 630 },
+    this.architectSpeakerText = this.addText(
+      220,
+      400,
+      "",
+      18,
+      "#FFD700",
+      "bold"
+    );
+    this.architectDialogueText = this.addText(220, 430, "", 24, "#ffffff");
+
+    this.showDialoguePanel(() => {
+      this.displayNextDialogue();
+    });
+  }
+
+  private addText(
+    x: number,
+    y: number,
+    content: string,
+    fontSize: number,
+    color: string,
+    fontStyle?: string
+  ) {
+    return this.add
+      .text(x, y, content, {
+        fontSize: `${fontSize}px`,
+        color,
+        fontStyle,
+        wordWrap: { width: 600 },
         lineSpacing: 8,
       })
       .setAlpha(0);
-
-    this.playIntroSequence();
-    EventBus.emit("current-scene-ready", this);
-  }
-
-  private playIntroSequence() {
-    this.architect.playAnimation("appear", () => {
-      this.architect.playAnimation("idle");
-      this.showDialoguePanel(() => {
-        this.displayNextDialogue();
-      });
-    });
   }
 
   private showDialoguePanel(callback?: () => void) {
@@ -96,10 +127,14 @@ export class Intro extends Scene {
 
     this.tweens.add({
       targets: [
-        this.dialoguePanel,
-        this.speakerText,
-        this.dialogueText,
-        this.portraitImage,
+        this.elaraPanel,
+        this.architectPanel,
+        this.elaraSpeakerText,
+        this.elaraDialogueText,
+        this.architectSpeakerText,
+        this.architectDialogueText,
+        this.elaraPortrait,
+        this.architectPortrait,
       ],
       alpha: 1,
       duration: 500,
@@ -113,45 +148,58 @@ export class Intro extends Scene {
 
   private displayNextDialogue() {
     if (this.dialogueIndex < this.dialogue.length) {
-      const { speaker, line, portrait } = this.dialogue[this.dialogueIndex];
+      const { speaker, line } = this.dialogue[this.dialogueIndex];
 
-      this.speakerText.setText(speaker);
-      this.dialogueText.setText(line);
+      this.clearDialogueBoxes();
 
-      if (portrait) {
-        this.portraitImage.setTexture(portrait);
-        this.tweens.add({
-          targets: this.portraitImage,
-          alpha: 1,
-          duration: 300,
-          ease: "Power2",
-        });
-      } else {
-        this.tweens.add({
-          targets: this.portraitImage,
-          alpha: 0,
-          duration: 300,
-          ease: "Power2",
-        });
+      if (speaker.toLowerCase() === "elara") {
+        this.elaraSpeakerText.setText(speaker);
+        this.elaraDialogueText.setText(line);
+        this.elaraPortrait.setAlpha(1);
+        this.architectPortrait.setAlpha(0.5);
+        this.architectPortrait.stop(); // Stop Architect's animation
+        this.architectPortrait.setFrame("sprite72"); // Reset to the first frame
+      } else if (speaker.toLowerCase() === "architect") {
+        this.architectSpeakerText.setText(speaker);
+        this.architectDialogueText.setText(line);
+        this.architectPortrait.setAlpha(1);
+        this.elaraPortrait.setAlpha(0.5);
+        this.architectPortrait.play("architect_talk"); // Play Architect's animation
       }
 
       this.dialogueIndex++;
       this.time.delayedCall(4000, () => this.displayNextDialogue());
     } else {
       this.hideDialoguePanel(() => {
-        this.architect.playAnimation("disappear", () => {
-          this.changeScene();
-        });
+        this.changeScene();
       });
     }
+  }
+
+  private clearDialogueBoxes() {
+    this.elaraSpeakerText.setText("");
+    this.elaraDialogueText.setText("");
+    this.architectSpeakerText.setText("");
+    this.architectDialogueText.setText("");
   }
 
   private hideDialoguePanel(callback?: () => void) {
     if (this.isAnimatingPanel) return;
     this.isAnimatingPanel = true;
 
+    this.architectPortrait.stop();
+
     this.tweens.add({
-      targets: [this.dialoguePanel, this.speakerText, this.dialogueText],
+      targets: [
+        this.elaraPanel,
+        this.architectPanel,
+        this.elaraSpeakerText,
+        this.elaraDialogueText,
+        this.architectSpeakerText,
+        this.architectDialogueText,
+        this.elaraPortrait,
+        this.architectPortrait,
+      ],
       alpha: 0,
       duration: 500,
       ease: "Power2",

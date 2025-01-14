@@ -2,8 +2,9 @@ import boto3
 from pydantic import BaseModel
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Dict
+from typing import Dict, Optional
 import asyncio
+import uuid
 from datetime import datetime
 from pydantic import ValidationError
 
@@ -44,6 +45,9 @@ class ConnectionManager:
 
 connection_manager = ConnectionManager()
 
+def generate_game_id(): 
+    return f"GAME#{uuid.uuid4()}"
+    
 # Cleanup inactive games
 async def cleanup_inactive_games():
     while True:
@@ -67,18 +71,23 @@ async def root():
     return {"message": "Welcome to the Chess Game API"}
 
 class LeaderboardSubmission(BaseModel):
+    gameId: str
     nickname: str
-    score: int
+    score: Optional[int] = None
 
 @app.post("/submit_score")
 async def submit_score(submission: LeaderboardSubmission):
     try:
-        response = leaderboard_table.get_item(Key={"nickname": submission.nickname})
+        # Use gameId and nickname as keys
+        response = leaderboard_table.get_item(
+            Key={"gameId": submission.gameId, "nickname": submission.nickname}
+        )
+
         if "Item" in response:
             existing_score = response["Item"]["score"]
             if submission.score > existing_score:
                 leaderboard_table.update_item(
-                    Key={"nickname": submission.nickname},
+                    Key={"gameId": submission.gameId, "nickname": submission.nickname},
                     UpdateExpression="SET score = :score",
                     ExpressionAttributeValues={":score": submission.score},
                 )
@@ -87,25 +96,34 @@ async def submit_score(submission: LeaderboardSubmission):
                 return {"message": "Existing score is higher. No update made."}
         else:
             leaderboard_table.put_item(
-                Item={"nickname": submission.nickname, "score": submission.score}
+                Item={
+                    "gameId": submission.gameId,
+                    "nickname": submission.nickname,
+                    "score": submission.score,
+                }
             )
             return {"message": "Score submitted successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error submitting score: {str(e)}")
 
-@app.get("/leaderboard")
-async def get_leaderboard(limit: int = 10):
+@app.get("/leaderboard/{game_id}")
+async def get_leaderboard(game_id: str, limit: int = 10):
     try:
-        response = leaderboard_table.scan()
-        items = response["Items"]
-        sorted_items = sorted(items, key=lambda x: x["score"], reverse=True)[:limit]
-        return sorted_items
+        # Query scores for a specific gameId
+        response = leaderboard_table.query(
+            KeyConditionExpression="gameId = :gameId",
+            ExpressionAttributeValues={":gameId": game_id},
+            ScanIndexForward=False,  # Descending order by score
+            Limit=limit,
+        )
+        return response.get("Items", [])
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving leaderboard: {str(e)}")
 
 @app.websocket("/ws/{game_id}")
 async def websocket_endpoint(websocket: WebSocket, game_id: str):
     try:
+        game_id = generate_game_id()
         print(f"WebSocket connection established for game_id: {game_id}")
         await connection_manager.connect(game_id, websocket)
 

@@ -8,7 +8,7 @@ import time
 
 
 class DarkChessEngine:
-    def __init__(self, stockfish_path: str = "/usr/local/bin/stockfish", time_limit: float = 0.05):
+    def __init__(self, stockfish_path: str = "/usr/local/bin/stockfish", time_limit: float = 0.50):
         """Initialize the chess engine and game state."""
         try:
             self.board = chess.Board()
@@ -137,6 +137,28 @@ class DarkChessEngine:
             return result["score"].relative.score(mate_score=10000) or 0
         except Exception:
             return 0
+
+    def get_game_score(self) -> int:
+        """Calculate game score based on position and state"""
+        try:
+            # Get absolute value of position evaluation
+            base_score = abs(self._get_position_evaluation())
+            
+            # Darkness state multipliers
+            darkness_multiplier = {
+                DarknessState.LIGHT: 1.0,
+                DarknessState.TWILIGHT: 1.2,
+                DarknessState.SHADOW: 1.4,
+                DarknessState.VOID: 1.6
+            }.get(self.darkness_system.get_state(), 1.0)
+
+            # Calculate final score
+            final_score = int(base_score * darkness_multiplier)
+            return final_score
+
+        except Exception as e:
+            print(f"Error calculating game score: {e}")
+            return 0  # Fallback in case of errors
 
     def __del__(self):
         """Ensure clean shutdown of the chess engine."""

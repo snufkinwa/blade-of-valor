@@ -9,11 +9,9 @@ export class LightEnding extends BaseEndingScene {
   create() {
     super.create();
 
-    // Add unique visual elements for light ending
     const centerX = this.cameras.main.centerX;
     const centerY = this.cameras.main.centerY;
 
-    // Create light rays effect
     const rays = this.add.group();
     for (let i = 0; i < 8; i++) {
       const angle = (i * Math.PI * 2) / 8;
@@ -33,7 +31,6 @@ export class LightEnding extends BaseEndingScene {
       });
     }
 
-    // Rotate the rays
     this.tweens.add({
       targets: rays.getChildren(),
       angle: "+=45",

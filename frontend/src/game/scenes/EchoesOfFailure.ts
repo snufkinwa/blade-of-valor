@@ -46,10 +46,11 @@ export class EchoesOfFailure extends Scene {
       .text(140, 100, "", {
         fontFamily: "Public Pixel",
         fontSize: 28,
-        align: "left",
+        align: "center",
         color: "#FFFFFF",
       })
-      .setOrigin(0, 0);
+      .setOrigin(0, 0)
+      .setStroke("#000000", 6);
 
     // Create dialogue text
     this.dialogueText = this.add
@@ -96,7 +97,8 @@ export class EchoesOfFailure extends Scene {
           align: "left",
           wordWrap: { width: 680 },
         })
-        .setText(line);
+        .setText(line)
+        .setStroke("#000000", 6);
 
       // Progress to next dialogue after delay
       this.dialogueIndex++;

@@ -93,18 +93,20 @@ export class Preloader extends Scene {
   }
 
   private loadAudioAssets() {
-    this.load.audio(
-      "mainTheme",
-      getAssetUrl("audio/For-The-Loved-Ones[Copyright Free Music].m4a")
-    );
-    this.load.audio(
-      "menuSelect",
-      getAssetUrl("audio/ClassicUISFX-Short-High20.wav")
-    );
-    this.load.audio(
-      "menuConfirm",
-      getAssetUrl("audio/ClassicUISFX-Short-High21.wav")
-    );
+    const audioAssets = {
+      mainTheme: "audio/For-The-Loved-Ones[Copyright Free Music].m4a",
+      menuSelect: "audio/ClassicUISFX-Short-High20.wav",
+      menuConfirm: "audio/ClassicUISFX-Short-High21.wav",
+      sword_sfx_c: "audio/sword-slash-and-swing-185432.mp3",
+      sword_sfx_x: "audio/sword-slide-44167.mp3",
+      sword_sfx_z: "audio/draw-sword1-44724.mp3",
+      gamePlayTheme:
+        "audio/atmosphere-dark-fantasy-dungeon-synthpiano-verse-248215.mp3",
+    };
+
+    Object.entries(audioAssets).forEach(([key, path]) => {
+      this.load.audio(key, getAssetUrl(path));
+    });
   }
 
   private loadOrbs() {

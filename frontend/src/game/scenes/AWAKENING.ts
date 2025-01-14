@@ -119,6 +119,7 @@ export class IntroScene extends BaseScene {
       await this.showDialogue("Elara", "Stay back! What are you?!");
 
       this.cameras.main.fadeOut(1000);
+      EventBus.removeAllListeners();
       this.cameras.main.once("camerafadeoutcomplete", () => {
         this.scene.start("EchoesOfFailure");
       });

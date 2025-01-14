@@ -6,25 +6,28 @@ const WEBSOCKET_BASE_URL = "ws://localhost:5328/ws/";
 export class WebSocketService {
   private static instance: WebSocketService;
   private socket: WebSocket | null = null;
-  private gameId: string;
+  private gameId: string | null = null;
   private playerHealthBar: PlayerHealthBar | null = null;
   private darklings: Phaser.Physics.Arcade.Group | null = null;
   private moveInterval: number | null = null;
 
   private constructor(gameId: string) {
-    this.gameId = gameId;
     const backendUrl = `${WEBSOCKET_BASE_URL}${gameId}`;
     this.socket = new WebSocket(backendUrl);
 
     this.socket.onopen = () => {
       console.log("WebSocket connection established");
-      this.startMoveUpdates(); // Start sending moves at regular intervals
+      this.startMoveUpdates();
     };
 
     this.socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
       console.log("Received message from server:", data);
 
+      if (data.status === "connected") {
+        this.gameId = data.gameId;
+        console.log(`Connected to game with ID: ${this.gameId}`);
+      }
       if (data.status === "success") {
         if (data.darkling_wave) {
           EventBus.emit("server-response", data);
