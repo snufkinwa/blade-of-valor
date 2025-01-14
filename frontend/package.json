@@ -1,0 +1,21 @@
+{
+  "name": "neuro-chess",
+  "version": "1.1.0",
+  "scripts": {
+    "dev": "next dev -p 8080",
+    "build": "next build",
+    "start": "next start -p 8080"
+  },
+  "dependencies": {
+    "next": "^15.1.2",
+    "phaser": "^3.80.1",
+    "react": "^18",
+    "react-dom": "^18"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "typescript": "^5.7.2"
+  }
+}
