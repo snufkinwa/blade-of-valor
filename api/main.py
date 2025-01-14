@@ -1,4 +1,3 @@
-import boto3
 from pydantic import BaseModel
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,7 +11,7 @@ from core.game_state import GameStateManager
 from exceptions.errors import GameError, GameLimitExceeded
 
 GAME_TIMEOUT = 600
-MAX_GAMES = 10
+MAX_GAMES = 5
 
 app = FastAPI()
 game_manager = GameStateManager() 
@@ -24,9 +23,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
-leaderboard_table = dynamodb.Table('Leaderboard')
 
 # Connection Manager
 class ConnectionManager:
@@ -70,61 +66,19 @@ async def startup_event():
 async def root():
     return {"message": "Welcome to the Chess Game API"}
 
-class LeaderboardSubmission(BaseModel):
-    gameId: str
-    nickname: str
-    score: Optional[int] = None
-
-@app.post("/submit_score")
-async def submit_score(submission: LeaderboardSubmission):
-    try:
-        # Use gameId and nickname as keys
-        response = leaderboard_table.get_item(
-            Key={"gameId": submission.gameId, "nickname": submission.nickname}
-        )
-
-        if "Item" in response:
-            existing_score = response["Item"]["score"]
-            if submission.score > existing_score:
-                leaderboard_table.update_item(
-                    Key={"gameId": submission.gameId, "nickname": submission.nickname},
-                    UpdateExpression="SET score = :score",
-                    ExpressionAttributeValues={":score": submission.score},
-                )
-                return {"message": "Score updated successfully"}
-            else:
-                return {"message": "Existing score is higher. No update made."}
-        else:
-            leaderboard_table.put_item(
-                Item={
-                    "gameId": submission.gameId,
-                    "nickname": submission.nickname,
-                    "score": submission.score,
-                }
-            )
-            return {"message": "Score submitted successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error submitting score: {str(e)}")
-
-@app.get("/leaderboard/{game_id}")
-async def get_leaderboard(game_id: str, limit: int = 10):
-    try:
-        # Query scores for a specific gameId
-        response = leaderboard_table.query(
-            KeyConditionExpression="gameId = :gameId",
-            ExpressionAttributeValues={":gameId": game_id},
-            ScanIndexForward=False,  # Descending order by score
-            Limit=limit,
-        )
-        return response.get("Items", [])
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error retrieving leaderboard: {str(e)}")
-
 @app.websocket("/ws/{game_id}")
 async def websocket_endpoint(websocket: WebSocket, game_id: str):
     try:
         game_id = generate_game_id()
         print(f"WebSocket connection established for game_id: {game_id}")
+
+        if len(game_manager.games) >= MAX_GAMES:
+            print("Game limit exceeded")
+            await websocket.accept()  # Accept the connection to send a message
+            await websocket.send_json({"status": "error", "message": "Game limit exceeded"})
+            await websocket.close(code=1013, reason="Game limit exceeded")  # Close with appropriate code
+            return
+
         await connection_manager.connect(game_id, websocket)
 
         if game_id not in game_manager.games:
@@ -167,24 +121,21 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                     game.darkness_system.update_state(health, darkling_count)
                     result = game.make_move()
                     print(f"Engine move result: {result}")
+                    
 
                     if result["status"] == "game_over":
                         game_over = True
-                        score = game._get_position_evaluation()
-
-                        # Submit score to leaderboard
-                        nickname = data.get("nickname", f"Guest_{game_id}")
-                        await submit_score(LeaderboardSubmission(nickname=nickname, score=score))
-
-                        # Notify frontend of game over
+                        game = game_manager.get_game(game_id)
+                        final_score = game.get_game_score() if game else 0
+                        
                         await websocket.send_json({
                             "status": "game_over",
                             "reason": result["reason"],
-                            "score": score
+                            "score": final_score,
+                            "gameId": game_id
                         })
                         break
 
-                    # Send move result to frontend
                     await websocket.send_json({
                         "status": "success",
                         "engine_move": result,

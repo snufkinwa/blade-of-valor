@@ -91,11 +91,11 @@ export class OrbSystem {
   private scene: Scene;
   private orbs: Orb[] = [];
   private playerHealthBar: PlayerHealthBar | null = null;
-  private lightLevel: number = 0;
-  private maxLight: number = 100;
+  public collectedOrbs: number = 0;
 
   constructor(scene: Scene) {
     this.scene = scene;
+    console.log("OrbSystem initialized"); // Debug log
   }
 
   setupCollisions(): void {
@@ -177,11 +177,17 @@ export class OrbSystem {
     );
   }
 
+  public getCollectedOrbs(): number {
+    return this.collectedOrbs;
+  }
+
   private collectOrb(orb: Orb, healthBar: PlayerHealthBar): void {
     const index = this.orbs.indexOf(orb);
     if (index > -1) {
       this.orbs.splice(index, 1);
       healthBar.collectOrb();
+      this.collectedOrbs++;
+      console.log("Collected orb. Total collected:", this.collectedOrbs);
 
       // Play collection effect
       this.scene.tweens.add({

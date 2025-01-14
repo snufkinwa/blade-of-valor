@@ -39,9 +39,8 @@ export class WebSocketService {
           break;
 
         case "game_over":
-          console.log(`Game Over: ${data.reason}`);
-          alert(`Game Over: ${data.reason}`);
-          this.cleanupSocket();
+          console.log(`Game Over: ${data.reason} - Score: ${data.score}`);
+          this.handleGameOver(data);
           break;
 
         default:
@@ -58,6 +57,23 @@ export class WebSocketService {
     this.socket.onerror = (error) => {
       console.error("WebSocket error:", error);
     };
+  }
+
+  private handleGameOver(data: { reason: string; score: number }) {
+    // Stop move updates
+    this.stopMoveUpdates();
+
+    // Emit game over event for UI handling
+    EventBus.emit("game-over", {
+      reason: data.reason,
+      score: data.score,
+      gameId: this.gameId,
+    });
+
+    // Clean up socket after a brief delay
+    setTimeout(() => {
+      this.cleanupSocket();
+    }, 1000);
   }
 
   private cleanupSocket(): void {
@@ -82,8 +98,9 @@ export class WebSocketService {
       // Prepare the message to send
       const message = {
         type: "move",
-        health: this.playerHealthBar?.getValue() || 100, // Fallback to 100 if null
-        darkling_count: this.darklings?.countActive() || 0, // Fallback to 0 if null
+        health: this.playerHealthBar?.getValue() || 100,
+        darkling_count:
+          this.darklings?.getChildren().filter((d) => d.active).length || 0,
       };
 
       // Debug log the message
@@ -108,7 +125,7 @@ export class WebSocketService {
     if (this.moveInterval === null) {
       this.moveInterval = window.setInterval(() => {
         this.requestMove();
-      }, 1000); // Adjust interval time as needed (1000ms = 1 second)
+      }, 5000);
     }
   }
 

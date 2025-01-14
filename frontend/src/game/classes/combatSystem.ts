@@ -7,7 +7,7 @@ import { PlayerHealthBar } from "./HealthBar";
 export class CombatSystem {
   private scene: Scene;
   private darklings: Darkling[] = [];
-  private orbSystem: OrbSystem;
+  public orbSystem: OrbSystem;
   private player: Phaser.Physics.Arcade.Sprite;
   private healthBar: PlayerHealthBar | null = null;
   private spawnTimer: Phaser.Time.TimerEvent;
@@ -22,12 +22,9 @@ export class CombatSystem {
     this.scene = scene;
     this.player = playerSprite as unknown as Phaser.Physics.Arcade.Sprite;
     this.orbSystem = new OrbSystem(scene);
+    console.log("CombatSystem OrbSystem initialized:", this.orbSystem);
     this.orbSystem.setupCollision(playerSprite);
     this.setupEventListeners();
-
-    this.scene.time.delayedCall(1000, () => {
-      this.spawnWave();
-    });
 
     this.startSpawning();
     this.startDistanceCheck();
@@ -61,7 +58,7 @@ export class CombatSystem {
   private startSpawning(): void {
     this.spawnTimer = this.scene.time.addEvent({
       delay: 3000,
-      callback: this.spawnDarkling,
+      callback: this.checkAndSpawnDarklings,
       callbackScope: this,
       loop: true,
     });
@@ -77,9 +74,10 @@ export class CombatSystem {
   }
 
   private spawnDarkling(): void {
-    if (!this.player || this.darklings.length >= 5) return;
+    const maxDarklings = 50;
+    if (!this.player || this.darklings.length >= maxDarklings) return;
 
-    const spawnX = this.player.x + Phaser.Math.Between(-30, 30);
+    const spawnX = this.player.x + Phaser.Math.Between(-200, 2000);
     const spawnY = this.player.y - 50;
 
     const darkling = new Darkling(this.scene, spawnX, spawnY);
@@ -87,6 +85,15 @@ export class CombatSystem {
     darkling.setPlayer(this.player);
 
     this.darklings.push(darkling);
+  }
+
+  private checkAndSpawnDarklings(): void {
+    const maxDarklings = 5; // Adjust this for difficulty scaling
+    const missingDarklings = maxDarklings - this.darklings.length;
+
+    for (let i = 0; i < missingDarklings; i++) {
+      this.spawnDarkling();
+    }
   }
 
   private checkDarklingsDistance(): void {
@@ -155,53 +162,6 @@ export class CombatSystem {
     );
   }
 
-  private createWavePath(width: number, height: number): Phaser.Curves.Path {
-    const path = new Phaser.Curves.Path(0, 0);
-    const points: Phaser.Math.Vector2[] = [];
-
-    for (let x = 0; x <= width; x += 20) {
-      const waveHeight = Math.sin(x * 0.05) * 150;
-      const baseOffset = height - waveHeight;
-      points.push(new Phaser.Math.Vector2(x, baseOffset));
-    }
-
-    path.splineTo(points);
-    return path;
-  }
-
-  private spawnWave(): void {
-    this.darklings.forEach((darkling) => darkling.destroy());
-    this.darklings = [];
-
-    const waveWidth = 400;
-    const waveHeight = 200;
-    const spawnX = this.scene.cameras.main.width + 100;
-    const baseY = this.scene.cameras.main.height - 200;
-
-    const wavePath = this.createWavePath(waveWidth, waveHeight);
-
-    const numRows = 5; // Adjust for desired number of rows
-    const darklingPerRow = Math.ceil(waveWidth / 60); // More darklings for wider waves
-    const totalDarklings = numRows * darklingPerRow;
-
-    for (let i = 0; i < totalDarklings; i++) {
-      const row = Math.floor(i / darklingPerRow);
-      const col = i % darklingPerRow;
-
-      // Position along wave with vertical emphasis at peaks
-      const t = col / (darklingPerRow - 1);
-      const point = wavePath.getPoint(t);
-
-      const x = spawnX + point.x;
-      const y = baseY + point.y - row * 30; // Consistent vertical spacing
-
-      const darkling = new Darkling(this.scene, x, y);
-      this.setupDarklingColliders(darkling);
-      darkling.setPlayer(this.player);
-      darkling.setWavePosition(i, y);
-      this.darklings.push(darkling);
-    }
-  }
   private handleDarklingDefeat(darkling: Darkling): void {
     const index = this.darklings.indexOf(darkling);
     if (index > -1) {

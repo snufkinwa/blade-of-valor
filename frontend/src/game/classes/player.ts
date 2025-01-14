@@ -49,14 +49,14 @@ export class Player extends Physics.Arcade.Sprite {
       body.setCollideWorldBounds(true);
       body.setGravityY(300);
     }
+    this.setupEventListeners();
 
     this.updateAnimations(texture);
     this.setupControls();
     //console.log("Player State:", this.moveState, "Velocity:", body.velocity);
-    this.setupTransformHandling();
   }
 
-  private setupTransformHandling(): void {
+  private setupEventListeners(): void {
     EventBus.on("stamina-depleted", () => {
       this.handleFormChange("dark");
     });
@@ -216,8 +216,6 @@ export class Player extends Physics.Arcade.Sprite {
         });
       }
     });
-
-    this.setupTransformHandling();
   }
 
   public pause(): void {
@@ -300,23 +298,16 @@ export class Player extends Physics.Arcade.Sprite {
     }
 
     console.log(`Transforming to ${newForm} form.`);
-
     this.currentForm = newForm;
 
-    const body = this.body as Physics.Arcade.Body;
-    if (body && body.velocity.x !== 0) {
+    this.play("transformBefore").once("animationcomplete", () => {
       this.setTexture(newForm);
       this.updateAnimations(newForm);
-    } else {
-      this.play("transformBefore").once("animationcomplete", () => {
-        this.setTexture(newForm);
-        this.updateAnimations(newForm);
 
-        this.play("transformAfter").once("animationcomplete", () => {
-          this.play("idle");
-        });
+      this.play("transformAfter").once("animationcomplete", () => {
+        this.play("idle");
       });
-    }
+    });
   }
 
   update(): void {
@@ -340,6 +331,14 @@ export class Player extends Physics.Arcade.Sprite {
         this.play("fall", true);
       }
     }
+
+    EventBus.on("stamina-depleted", () => {
+      this.handleFormChange("dark");
+    });
+
+    EventBus.on("light-restored", () => {
+      this.handleFormChange("light");
+    });
 
     // Handle landing
     if (body.blocked.down) {

@@ -113,26 +113,22 @@ class DarkChessEngine:
             return 0
 
     def get_game_score(self) -> int:
-        """Calculate game score based on position and state"""
+        """Calculate a simple game score based only on darkness level"""
         try:
-            # Get absolute value of position evaluation
-            base_score = abs(self._get_position_evaluation())
+            # Base score of 1000
+            base_score = 1000
             
-            # Darkness state multipliers
-            darkness_multiplier = {
-                DarknessState.LIGHT: 1.0,
-                DarknessState.TWILIGHT: 1.2,
-                DarknessState.SHADOW: 1.4,
-                DarknessState.VOID: 1.6
-            }.get(self.darkness_system.get_state(), 1.0)
-
+            # Get darkness level (0-100) and use it as a multiplier (1.0 to 2.0)
+            multiplier = 1.0 + (random.gammavariate(2, 1) / 100)
+            
             # Calculate final score
-            final_score = int(base_score * darkness_multiplier)
+            final_score = int(base_score * multiplier)
+            
             return final_score
-
+            
         except Exception as e:
-            print(f"Error calculating game score: {e}")
-            return 0  # Fallback in case of errors
+            print(f"Error calculating score: {e}")
+            return 1000
 
     def __del__(self):
         """Ensure clean shutdown of the chess engine."""

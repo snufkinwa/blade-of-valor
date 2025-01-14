@@ -10,7 +10,7 @@ export class BaseScene extends Scene {
   protected imageLayers: Record<string, GameObjects.TileSprite> = {};
   protected fogLayers: Record<string, GameObjects.TileSprite> = {};
   protected player!: Player;
-  protected darklings!: Phaser.Physics.Arcade.Group;
+  public darklings!: Phaser.Physics.Arcade.Group;
   protected particles!: Phaser.GameObjects.Particles.ParticleEmitter;
   protected playerHealthBar!: PlayerHealthBar;
 
@@ -196,31 +196,17 @@ export class BaseScene extends Scene {
   }
 
   private setupDarklings() {
-    // Create the group with physics
     this.darklings = this.physics.add.group({
       classType: Darkling, // Use the Darkling wrapper class
       runChildUpdate: true,
     });
-
-    // Add colliders with world layers
-    if (this.layers["Ground"]) {
-      this.physics.add.collider(this.darklings, this.layers["Ground"]);
-    }
-    if (this.layers["Platforms"]) {
-      this.physics.add.collider(this.darklings, this.layers["Platforms"]);
-    }
-    if (this.layers["Gutter"]) {
-      this.physics.add.collider(this.darklings, this.layers["Gutter"]);
-    }
   }
 
   protected addDarkling(x: number, y: number): Darkling {
     const darkling = new Darkling(this, x, y); // Create the Darkling instance
 
-    // Add Darkling to the group
-    this.darklings.add(darkling);
+    this.darklings.add(darkling.setActive(true));
 
-    // Ensure it's colliding with the world layers
     if (this.layers["Ground"]) {
       this.physics.add.collider(darkling, this.layers["Ground"]);
     }

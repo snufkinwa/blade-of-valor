@@ -3,8 +3,6 @@ import { EventBus } from "../EventBus";
 
 export default class Darkling extends Physics.Arcade.Sprite {
   public hp: number = 200;
-  private static readonly WAVE_DISTANCE = 20;
-  private static readonly MAX_STACK_HEIGHT = 4;
 
   private moveState = {
     isWalking: false,
@@ -19,10 +17,8 @@ export default class Darkling extends Physics.Arcade.Sprite {
   private detectionRange: number = 300;
   private attackRange: number = 50;
   private lastAttackTime: number = 0;
-  private attackCooldown: number = 2000; // 2 seconds between attacks
+  private attackCooldown: number = 2000;
   private chaseSpeed: number = 100;
-  private aiState: "wave" | "idle" | "chase" | "attack" = "wave";
-  private waveIndex?: number;
   public isAttacking: boolean = false;
   private onAttackComplete: (() => void) | null = null;
 
@@ -228,35 +224,6 @@ export default class Darkling extends Physics.Arcade.Sprite {
     return this;
   }
 
-  public setWavePosition(index: number, baseY: number): this {
-    this.waveIndex = index;
-
-    const row = Math.floor((Math.sqrt(1 + 8 * index) - 1) / 2);
-    const posInRow = index - (row * (row + 1)) / 2;
-
-    const xSpacing = 40; // More space between darklings for better visibility
-    const ySpacing = 20; // Reduced spacing for tighter rows
-
-    // Calculate position with slight randomness
-    const randomX = Math.sin(index * 0.3) * 10;
-    const randomY = Math.cos(index * 0.3) * 5;
-
-    const x = this.x - xSpacing * row - xSpacing * posInRow + randomX;
-    const y = baseY - ySpacing * row + randomY;
-
-    this.setPosition(x, y);
-
-    const body = this.body as Physics.Arcade.Body;
-    if (body) {
-      body.setCollideWorldBounds(false);
-      body.setGravityY(0); // Hovering effect
-      body.setDrag(50); // Smooth movement
-    }
-
-    this.setDepth(1000 - y);
-    return this;
-  }
-
   update(): void {
     const body = this.body as Physics.Arcade.Body;
 
@@ -267,34 +234,12 @@ export default class Darkling extends Physics.Arcade.Sprite {
 
     if (!body || this.moveState.isHurt || this.moveState.isDisappearing) return;
 
-    if (this.waveIndex !== undefined) {
-      this.handleWaveMovement(body);
-    } else if (this.player) {
+    if (this.player) {
       this.handleAIBehavior();
     }
 
     if (this.moveState.isWalking && body.velocity.x === 0) {
       this.stop();
-    }
-  }
-
-  private handleWaveMovement(body: Physics.Arcade.Body): void {
-    const baseSpeed = -150; // Horizontal speed
-    const waveIndex = this.waveIndex || 0;
-    const time = this.scene.time.now;
-
-    // Emphasize vertical oscillation at wave peaks
-    const verticalOffset =
-      Math.sin((time + waveIndex * 100) / 500) * (this.y > 300 ? 8 : 3);
-
-    body.setVelocity(baseSpeed, verticalOffset);
-    body.setAllowGravity(false);
-
-    if (this.x < this.scene.cameras.main.width - 150) {
-      this.waveIndex = undefined;
-      this.aiState = "idle";
-      body.setCollideWorldBounds(true);
-      body.setAllowGravity(true);
     }
   }
 

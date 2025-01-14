@@ -84,14 +84,10 @@ export const PhaserGame = forwardRef<IRefPhaserGame, IProps>(
 
       EventBus.on("stamina-depleted", () => {
         console.log("Stamina depleted event received in PhaserGame");
-        const scene = sceneRef.current as any;
-        scene?.player?.handleFormChange("dark");
       });
 
       EventBus.on("light-restored", () => {
         console.log("Light restored event received in PhaserGame");
-        const scene = sceneRef.current as any;
-        scene?.player?.handleFormChange("light");
       });
 
       const handleKeyDown = (event: KeyboardEvent) => handleGameInput(event);
@@ -100,6 +96,25 @@ export const PhaserGame = forwardRef<IRefPhaserGame, IProps>(
 
       window.addEventListener("keydown", handleKeyDown);
       window.addEventListener("keyup", handleKeyUp);
+
+      EventBus.on("game-over", (data: any) => {
+        console.log("Game Over received:", data);
+        const scene = sceneRef.current as any;
+        if (scene && scene.scene) {
+          scene.scene.start("GameOver", {
+            reason: data.reason,
+            score: data.score,
+            gameId: data.gameId,
+          });
+        }
+      });
+
+      EventBus.on("restart-game", () => {
+        const scene = sceneRef.current as any;
+        if (scene && scene.scene) {
+          scene.scene.launch("MainMenu");
+        }
+      });
 
       return () => {
         EventBus.removeListener("current-scene-ready", handleSceneChange);

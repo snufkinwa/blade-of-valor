@@ -259,26 +259,12 @@ export class PlayerHealthBar extends BaseHealthBar {
         this.updateDarkBar();
 
         // Check if we should transform back to light
-        if (this.baseWidthLight >= 30) {
-          // Threshold for switching back
+        if (this.currentForm === "dark" && this.baseWidthLight > 10) {
+          EventBus.emit("light-restored");
           this.setForm("light");
-          if (prevForm !== "light") {
-            EventBus.emit("light-restored");
-          }
         }
       }
     }
-
-    console.log(
-      "After - Light:",
-      this.baseWidthLight,
-      "Dark:",
-      this.baseWidthDark,
-      "Form:",
-      this.currentForm,
-      "Previous Form:",
-      prevForm
-    );
   }
 
   destroy() {

@@ -1,7 +1,6 @@
 import { Boot } from "./scenes/Boot";
 import { GameOver } from "./scenes/GameOver";
-import { Intro } from "./scenes/Intro";
-import { Corruption as Middlegame } from "./scenes/CORRUPTION";
+import { Corruption as Platformer } from "./scenes/CORRUPTION";
 import { MainMenu } from "./scenes/MainMenu";
 import { Tutorial } from "./scenes/Tutorial";
 import { AUTO, Game } from "phaser";
@@ -15,7 +14,7 @@ const config: Phaser.Types.Core.GameConfig = {
   height: 768,
   parent: "game-container",
   backgroundColor: "transparent",
-  scene: [Boot, Preloader, MainMenu, Intro, Middlegame, GameOver, Tutorial],
+  scene: [Boot, Preloader, MainMenu, Platformer, GameOver, Tutorial],
   physics: {
     default: "arcade",
     arcade: {
