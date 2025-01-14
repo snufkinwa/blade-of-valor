@@ -241,18 +241,18 @@ export class Player extends Physics.Arcade.Sprite {
 
   public cleanup(): void {
     // Remove all event listeners
-    EventBus.off("run-pressed");
-    EventBus.off("run-released");
-    EventBus.off("jump-pressed");
-    EventBus.off("attack-1-pressed");
-    EventBus.off("attack-2-pressed");
-    EventBus.off("attack-3-pressed");
-    EventBus.off("dash-pressed");
-    EventBus.off("dash-released");
-    EventBus.off("roll-pressed");
-    EventBus.off("recover-balance");
+    EventBus.removeListener("run-pressed");
+    EventBus.removeListener("run-released");
+    EventBus.removeListener("jump-pressed");
+    EventBus.removeListener("attack-1-pressed");
+    EventBus.removeListener("attack-2-pressed");
+    EventBus.removeListener("attack-3-pressed");
+    EventBus.removeListener("dash-pressed");
+    EventBus.removeListener("dash-released");
+    EventBus.removeListener("roll-pressed");
+    EventBus.removeListener("recover-balance");
 
-    EventBus.off("stamina-depleted");
+    EventBus.removeListener("stamina-depleted");
   }
 
   private isAttacking = false;

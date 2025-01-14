@@ -14,6 +14,7 @@ export class MainMenu extends Scene {
   leftArrow: GameObjects.Image;
   rightArrow: GameObjects.Image;
   currentSelection: number = 0;
+  private controlsPanel: GameObjects.NineSlice;
 
   constructor() {
     super("MainMenu");
@@ -29,7 +30,7 @@ export class MainMenu extends Scene {
     this.logo = this.add.image(513, 354, "logoimg");
     //this.seperator = this.add.image(centerX, 480, "seperator").setScale(1.0);
     this.seperator = this.add
-      .image(centerX, 600, "seperator")
+      .image(centerX, 520, "seperator")
       .setScale(1.0)
       .setFlipY(true);
     if (!this.sound.get("mainTheme")) {
@@ -40,19 +41,52 @@ export class MainMenu extends Scene {
       this.music.play();
     }
 
-    this.selectSound = this.sound.add("menuSelect", { volume: 0.5 });
     this.confirmSound = this.sound.add("menuConfirm", { volume: 0.4 });
+    // Create controls panel
+
+    // Add controls title
+    this.add
+      .text(centerX - 180, centerY + 200, "Controls:", {
+        fontFamily: "Public Pixel",
+        fontSize: "14px",
+        color: "#FFD700",
+        align: "left",
+      })
+      .setOrigin(0.5);
+
+    // Add controls text
+    this.add
+      .text(
+        centerX + 100,
+        centerY + 280,
+        "Arrow Keys  -  Move\n" +
+          "Space       -  Jump\n" +
+          "Z           -  Light Attack\n" +
+          "X           -  Heavy Attack\n" +
+          "C           -  Special Attack\n" +
+          "Q           -  Dash\n" +
+          "R           -  Roll\n\n" +
+          "Press ENTER to Start\n",
+        {
+          fontFamily: "Public Pixel",
+          fontSize: "12px",
+          color: "#ffffff",
+          align: "left",
+          lineSpacing: 12,
+        }
+      )
+      .setOrigin(0.5);
 
     // Selection highlight background
     this.selectionHighlight = this.add
-      .image(centerX, 520, "popup-bg")
+      .image(centerX, 480, "popup-bg")
       .setScale(1.1);
 
     // Menu options
-    const options = ["New Game", "Tutorial"];
+    const options = ["New Game"];
     this.menuOptions = options.map((option, index) => {
       return this.add
-        .text(centerX, 520 + index * 40, option, {
+        .text(centerX, 490 + index * 40, option, {
           fontFamily: "Public Pixel",
           fontSize: 16,
           color: "#ffffff",
@@ -64,10 +98,10 @@ export class MainMenu extends Scene {
 
     // Selection arrows
     this.leftArrow = this.add
-      .image(centerX - 100, 520, "arrow-left")
+      .image(centerX - 100, 480, "arrow-left")
       .setScale(0.8);
     this.rightArrow = this.add
-      .image(centerX + 100, 520, "arrow-right")
+      .image(centerX + 100, 480, "arrow-right")
       .setScale(0.8);
 
     this.tweens.add({
@@ -88,26 +122,12 @@ export class MainMenu extends Scene {
 
     this.updateSelectionVisuals();
 
-    // Setup input handlers
-    EventBus.on("arrow-up-pressed", () => this.changeSelection(-1));
-    EventBus.on("arrow-down-pressed", () => this.changeSelection(1));
     EventBus.on("enter-key-pressed", this.handleEnterKey, this);
     EventBus.on("esc-key-pressed", () => {
       this.scene.start("MainMenu");
     });
 
     EventBus.emit("current-scene-ready", this);
-  }
-
-  changeSelection(direction: number) {
-    // Update current selection
-    if (this.selectSound) {
-      this.selectSound.play();
-    }
-    this.currentSelection =
-      (this.currentSelection + direction + this.menuOptions.length) %
-      this.menuOptions.length;
-    this.updateSelectionVisuals();
   }
 
   updateSelectionVisuals() {
@@ -117,7 +137,7 @@ export class MainMenu extends Scene {
     });
 
     // Update highlight and arrow positions
-    const targetY = 520 + this.currentSelection * 40;
+    const targetY = 490 + this.currentSelection * 40;
     this.selectionHighlight.setPosition(this.selectionHighlight.x, targetY);
     this.leftArrow.setPosition(this.leftArrow.x, targetY);
     this.rightArrow.setPosition(this.rightArrow.x, targetY);
@@ -132,27 +152,8 @@ export class MainMenu extends Scene {
         this.cameras.main.fadeOut(500, 0, 0, 0);
         this.cameras.main.once("camerafadeoutcomplete", () => {
           this.cleanupAudio();
+          this.scene.stop("MainMenu");
           this.scene.start("Corruption");
-        });
-        break;
-      case 1: // Tutorial
-        if (this.music) {
-          this.music.pause();
-        }
-        EventBus.off("arrow-up-pressed", () => this.changeSelection(-1));
-        EventBus.off("arrow-down-pressed", () => this.changeSelection(1));
-        EventBus.off("enter-key-pressed", this.handleEnterKey, this);
-        this.scene.launch("Tutorial", {
-          parentScene: this,
-          onClose: () => {
-            if (this.music) {
-              this.music.resume();
-              this.scene.resume("Main Menu");
-              EventBus.on("arrow-up-pressed", () => this.changeSelection(-1));
-              EventBus.on("arrow-down-pressed", () => this.changeSelection(1));
-              EventBus.on("enter-key-pressed", this.handleEnterKey, this);
-            }
-          },
         });
         break;
     }
@@ -174,9 +175,6 @@ export class MainMenu extends Scene {
 
   shutdown() {
     this.cleanupAudio();
-    EventBus.off("enter-key-pressed", this.handleEnterKey);
-    EventBus.off("arrow-up-pressed", () => this.changeSelection(-1));
-    EventBus.off("arrow-down-pressed", () => this.changeSelection(1));
     EventBus.removeAllListeners();
   }
 }

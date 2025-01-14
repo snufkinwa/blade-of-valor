@@ -105,6 +105,6 @@ export class Tutorial extends Scene {
   }
 
   shutdown() {
-    EventBus.off("esc-key-pressed");
+    EventBus.removeAllListeners();
   }
 }

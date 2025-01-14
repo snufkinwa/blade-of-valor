@@ -34,12 +34,6 @@ export class Corruption extends BaseScene {
     });
   }
 
-  private handleServerResponse(data: any) {
-    if (data.game_stage) {
-      EventBus.emit("game-stage-update", data.game_stage);
-    }
-  }
-
   private updateOrbText() {
     if (this.combatSystem) {
       const collectedOrbs = this.combatSystem.orbSystem.getCollectedOrbs();
@@ -49,14 +43,14 @@ export class Corruption extends BaseScene {
 
   private setupUI() {
     // Orb count UI
-    this.orbText = this.add.text(500, 20, "Orbs: 0", {
+    this.orbText = this.add.text(900, 20, "Orbs: 0", {
       fontSize: "16px",
       color: "#ffffff",
     });
     this.orbText.setDepth(1000).setScrollFactor(0);
 
     // Timer UI
-    this.timerText = this.add.text(500, 50, `Time: ${this.timerDuration}`, {
+    this.timerText = this.add.text(900, 50, `Time: ${this.timerDuration}`, {
       fontSize: "16px",
       color: "#ffffff",
     });
@@ -125,7 +119,19 @@ export class Corruption extends BaseScene {
   }
 
   changeScene() {
+    EventBus.removeAllListeners();
     this.cleanupBeforeTransition();
+    if (this.combatSystem) {
+      this.combatSystem.cleanup();
+      this.combatSystem = null;
+    }
+    if (this.timerEvent) {
+      this.timerEvent.destroy();
+      this.timerEvent = null;
+    }
+    if (this.player) {
+      this.player.destroy();
+    }
     this.scene.start("GameOver");
   }
 }

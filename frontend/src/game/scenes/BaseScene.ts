@@ -200,6 +200,16 @@ export class BaseScene extends Scene {
       classType: Darkling, // Use the Darkling wrapper class
       runChildUpdate: true,
     });
+
+    if (this.layers["Ground"]) {
+      this.physics.add.collider(this.darklings, this.layers["Ground"]);
+    }
+    if (this.layers["Platforms"]) {
+      this.physics.add.collider(this.darklings, this.layers["Platforms"]);
+    }
+    if (this.layers["Gutter"]) {
+      this.physics.add.collider(this.darklings, this.layers["Gutter"]);
+    }
   }
 
   protected addDarkling(x: number, y: number): Darkling {

@@ -91,18 +91,6 @@ export const PhaserGame = forwardRef<IRefPhaserGame, IProps>(
       window.addEventListener("keydown", handleKeyDown);
       window.addEventListener("keyup", handleKeyUp);
 
-      EventBus.on("game-over", (data: any) => {
-        console.log("Game Over received:", data);
-        const scene = sceneRef.current as any;
-        if (scene && scene.scene) {
-          scene.scene.start("GameOver", {
-            reason: data.reason,
-            score: data.score,
-            gameId: data.gameId,
-          });
-        }
-      });
-
       return () => {
         EventBus.removeListener("current-scene-ready", handleSceneChange);
         EventBus.removeListener("stamina-depleted");

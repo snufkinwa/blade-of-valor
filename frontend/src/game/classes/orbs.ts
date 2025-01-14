@@ -187,7 +187,7 @@ export class OrbSystem {
       this.orbs.splice(index, 1);
       healthBar.collectOrb();
       this.collectedOrbs++;
-      console.log("Collected orb. Total collected:", this.collectedOrbs);
+      //console.log("Collected orb. Total collected:", this.collectedOrbs);
 
       // Play collection effect
       this.scene.tweens.add({
