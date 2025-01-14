@@ -50,37 +50,7 @@ export const PhaserGame = forwardRef<IRefPhaserGame, IProps>(
         }
       };
 
-      const handlePauseGame = () => {
-        if (!game.current || isPaused.current) return;
-
-        isPaused.current = true;
-        game.current.scene.scenes.forEach((scene) => {
-          if (scene.scene.isActive()) {
-            scene.scene.pause();
-            scene.sound?.pauseAll();
-          }
-        });
-
-        EventBus.emit("game-paused");
-      };
-
-      const handleResumeGame = () => {
-        if (!game.current || !isPaused.current) return;
-
-        isPaused.current = false;
-        game.current.scene.scenes.forEach((scene) => {
-          if (scene.scene.isPaused()) {
-            scene.scene.resume();
-            scene.sound?.resumeAll();
-          }
-        });
-
-        EventBus.emit("game-resumed");
-      };
-
       EventBus.on("current-scene-ready", handleSceneChange);
-      EventBus.on("pause-game", handlePauseGame);
-      EventBus.on("resume-game", handleResumeGame);
       EventBus.on("player-damage", (damage: number) => {
         if (sceneRef.current) {
           const scene = sceneRef.current as any;
@@ -110,18 +80,18 @@ export const PhaserGame = forwardRef<IRefPhaserGame, IProps>(
       EventBus.on("server-response", (data: any) => {
         if (data.game_stage)
           EventBus.emit("game-stage-update", data.game_stage);
-        if (data.darkling_wave)
-          EventBus.emit("darkling-wave", data.darkling_wave);
       });
 
       EventBus.on("stamina-depleted", () => {
         console.log("Stamina depleted event received in PhaserGame");
-        EventBus.emit("form-changed", "dark");
+        const scene = sceneRef.current as any;
+        scene?.player?.handleFormChange("dark");
       });
 
       EventBus.on("light-restored", () => {
         console.log("Light restored event received in PhaserGame");
-        EventBus.emit("form-changed", "light");
+        const scene = sceneRef.current as any;
+        scene?.player?.handleFormChange("light");
       });
 
       const handleKeyDown = (event: KeyboardEvent) => handleGameInput(event);
@@ -133,8 +103,6 @@ export const PhaserGame = forwardRef<IRefPhaserGame, IProps>(
 
       return () => {
         EventBus.removeListener("current-scene-ready", handleSceneChange);
-        EventBus.removeListener("pause-game", handlePauseGame);
-        EventBus.removeListener("resume-game", handleResumeGame);
         EventBus.removeListener("stamina-depleted");
         EventBus.removeListener("light-restored");
         EventBus.removeListener("form-changed");

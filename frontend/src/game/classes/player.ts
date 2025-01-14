@@ -50,19 +50,17 @@ export class Player extends Physics.Arcade.Sprite {
       body.setGravityY(300);
     }
 
-    this.setupAnimations(scene, texture);
+    this.updateAnimations(texture);
     this.setupControls();
     //console.log("Player State:", this.moveState, "Velocity:", body.velocity);
     this.setupTransformHandling();
   }
 
   private setupTransformHandling(): void {
-    // Listen for stamina depletion from HealthBar
     EventBus.on("stamina-depleted", () => {
       this.handleFormChange("dark");
     });
 
-    // Listen for light form restoration
     EventBus.on("light-restored", () => {
       this.handleFormChange("light");
     });
@@ -88,7 +86,7 @@ export class Player extends Physics.Arcade.Sprite {
     return this;
   }
 
-  private setupAnimations(scene: Phaser.Scene, texture: string): void {
+  private updateAnimations(texture: string): void {
     const animations = [
       { key: "idle", start: 1, end: 3, frameRate: 1, repeat: -1 },
       { key: "lookIntro", start: 4, end: 9, frameRate: 8, repeat: 0 },
@@ -114,23 +112,20 @@ export class Player extends Physics.Arcade.Sprite {
     ];
 
     animations.forEach(({ key, start, end, frameRate, repeat }) => {
-      scene.anims.remove(key);
-      console.log("Creating animation:", key, { start, end });
-      const frames = scene.anims.generateFrameNames(texture, {
+      this.scene.anims.remove(key);
+      const frames = this.scene.anims.generateFrameNames(texture, {
         start,
         end,
         prefix: "sprite",
         zeroPad: 0,
       });
-      console.log("Generated frames:", frames);
 
-      scene.anims.create({
+      this.scene.anims.create({
         key,
         frames,
         frameRate,
         repeat,
       });
-      console.log(`Animation created: ${key}`, frames);
     });
   }
 
@@ -222,7 +217,7 @@ export class Player extends Physics.Arcade.Sprite {
       }
     });
 
-    this.setupTransformHandling;
+    this.setupTransformHandling();
   }
 
   public pause(): void {
@@ -299,12 +294,29 @@ export class Player extends Physics.Arcade.Sprite {
   }
 
   private handleFormChange(newForm: "light" | "dark"): void {
-    // Don't transform if we're already in that form
-    if (this.currentForm === newForm) return;
+    if (this.currentForm === newForm) {
+      console.log(`Already in ${newForm} form, skipping transformation.`);
+      return;
+    }
 
-    // Update player texture
+    console.log(`Transforming to ${newForm} form.`);
+
     this.currentForm = newForm;
-    this.setTexture(newForm);
+
+    const body = this.body as Physics.Arcade.Body;
+    if (body && body.velocity.x !== 0) {
+      this.setTexture(newForm);
+      this.updateAnimations(newForm);
+    } else {
+      this.play("transformBefore").once("animationcomplete", () => {
+        this.setTexture(newForm);
+        this.updateAnimations(newForm);
+
+        this.play("transformAfter").once("animationcomplete", () => {
+          this.play("idle");
+        });
+      });
+    }
   }
 
   update(): void {

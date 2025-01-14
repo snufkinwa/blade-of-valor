@@ -1,12 +1,9 @@
 import { Boot } from "./scenes/Boot";
 import { GameOver } from "./scenes/GameOver";
-import { LightEnding } from "./scenes/LightEnding";
 import { Intro } from "./scenes/Intro";
-import { IntroScene as Opening } from "./scenes/AWAKENING";
 import { Corruption as Middlegame } from "./scenes/CORRUPTION";
 import { MainMenu } from "./scenes/MainMenu";
 import { Tutorial } from "./scenes/Tutorial";
-import { EchoesOfFailure } from "./scenes/EchoesOfFailure";
 import { AUTO, Game } from "phaser";
 import { Preloader } from "./scenes/Preloader";
 
@@ -18,18 +15,7 @@ const config: Phaser.Types.Core.GameConfig = {
   height: 768,
   parent: "game-container",
   backgroundColor: "transparent",
-  scene: [
-    Boot,
-    Preloader,
-    MainMenu,
-    Intro,
-    Opening,
-    Middlegame,
-    GameOver,
-    LightEnding,
-    Tutorial,
-    EchoesOfFailure,
-  ],
+  scene: [Boot, Preloader, MainMenu, Intro, Middlegame, GameOver, Tutorial],
   physics: {
     default: "arcade",
     arcade: {

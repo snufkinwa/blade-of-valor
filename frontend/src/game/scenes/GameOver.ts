@@ -1,33 +1,51 @@
-import { EventBus } from '../EventBus';
-import { Scene } from 'phaser';
+export class GameOver extends Phaser.Scene {
+  constructor() {
+    super("GameOver");
+  }
 
-export class GameOver extends Scene
-{
-    camera: Phaser.Cameras.Scene2D.Camera;
-    background: Phaser.GameObjects.Image;
-    gameOverText : Phaser.GameObjects.Text;
+  create(data: { reason: string }) {
+    // Display a "Game Over" title
+    const title = this.add.text(
+      this.cameras.main.centerX,
+      this.cameras.main.centerY - 50,
+      "Game Over",
+      {
+        font: "48px Arial",
+        color: "#ff0000",
+        align: "center",
+      }
+    );
+    title.setOrigin(0.5);
 
-    constructor ()
-    {
-        super('GameOver');
-    }
+    // Display the reason for the game over
+    const reasonText = this.add.text(
+      this.cameras.main.centerX,
+      this.cameras.main.centerY,
+      `Reason: ${data.reason}`,
+      {
+        font: "24px Arial",
+        color: "#ffffff",
+        align: "center",
+      }
+    );
+    reasonText.setOrigin(0.5);
 
-    create ()
-    {
-        this.camera = this.cameras.main
+    // Add a "Restart" button
+    const restartButton = this.add.text(
+      this.cameras.main.centerX,
+      this.cameras.main.centerY + 100,
+      "Restart Game",
+      {
+        font: "32px Arial",
+        color: "#00ff00",
+        align: "center",
+      }
+    );
+    restartButton.setOrigin(0.5).setInteractive();
 
-
-        this.gameOverText = this.add.text(512, 384, 'Game Over', {
-            fontFamily: 'Rover Cloxe', fontSize: 64, color: '#ffffff',
-            stroke: '#000000', strokeThickness: 8,
-            align: 'center'
-        }).setOrigin(0.5).setDepth(100);
-        
-        EventBus.emit('current-scene-ready', this);
-    }
-
-    changeScene ()
-    {
-        this.scene.start('MainMenu');
-    }
+    // Restart the game when the button is clicked
+    restartButton.on("pointerdown", () => {
+      this.scene.start("MainGameScene"); // Replace with your main game scene's key
+    });
+  }
 }

@@ -10,4 +10,3 @@ class DarklingWave(BaseModel):
 class GameState(BaseModel):
     valid_moves: List[str]
     engine_move: Optional[str]
-    darkling_wave: DarklingWave

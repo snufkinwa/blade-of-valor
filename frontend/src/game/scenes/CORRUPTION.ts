@@ -34,18 +34,12 @@ export class Corruption extends BaseScene {
       if (data.engine_move) {
         console.log("Engine move:", data.engine_move);
       }
-      if (data.darkling_wave) {
-        console.log("Darkling wave:", data.darkling_wave);
-      }
     });
   }
 
   private handleServerResponse(data: any) {
     if (data.game_stage) {
       EventBus.emit("game-stage-update", data.game_stage);
-    }
-    if (data.darkling_wave) {
-      EventBus.emit("darkling-wave", data.darkling_wave);
     }
   }
 

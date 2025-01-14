@@ -47,7 +47,7 @@ connection_manager = ConnectionManager()
 
 def generate_game_id(): 
     return f"GAME#{uuid.uuid4()}"
-    
+
 # Cleanup inactive games
 async def cleanup_inactive_games():
     while True:
@@ -188,7 +188,6 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                     await websocket.send_json({
                         "status": "success",
                         "engine_move": result,
-                        "darkling_wave": game.get_darkling_wave().dict()
                     })
                 else:
                     await websocket.send_json({

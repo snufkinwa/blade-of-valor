@@ -14,7 +14,7 @@ export class CombatSystem {
   private checkDistanceTimer: Phaser.Time.TimerEvent;
   private readonly CHASE_DISTANCE = 150;
   private readonly ATTACK_DISTANCE = 60;
-  private readonly DAMAGE_AMOUNT = 10;
+  private readonly DAMAGE_AMOUNT = 25;
   private isPlayerInvulnerable = false;
   private invulnerabilityDuration = 6000;
 

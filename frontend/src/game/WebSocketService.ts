@@ -24,20 +24,29 @@ export class WebSocketService {
       const data = JSON.parse(event.data);
       console.log("Received message from server:", data);
 
-      if (data.status === "connected") {
-        this.gameId = data.gameId;
-        console.log(`Connected to game with ID: ${this.gameId}`);
-      }
-      if (data.status === "success") {
-        if (data.darkling_wave) {
+      switch (data.status) {
+        case "connected":
+          this.gameId = data.gameId;
+          console.log(`Connected to game with ID: ${this.gameId}`);
+          break;
+
+        case "success":
           EventBus.emit("server-response", data);
-        }
-      } else if (data.status === "error") {
-        console.error("Error from server:", data.message);
-      } else if (data.status === "game_over") {
-        console.log(`Game Over: ${data.reason}`);
-        alert(`Game Over: ${data.reason}`);
-        this.cleanupSocket();
+          break;
+
+        case "error":
+          console.error("Error from server:", data.message);
+          break;
+
+        case "game_over":
+          console.log(`Game Over: ${data.reason}`);
+          alert(`Game Over: ${data.reason}`);
+          this.cleanupSocket();
+          break;
+
+        default:
+          console.warn("Unknown status from server:", data.status);
+          break;
       }
     };
 

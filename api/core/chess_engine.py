@@ -101,32 +101,6 @@ class DarkChessEngine:
             "move": chosen_move.uci()
         }
 
-
-    def get_darkling_wave(self) -> DarklingWave:
-        """Generate darkling wave based on evaluation and current state"""
-        evaluation = self._get_position_evaluation()
-        darkness_state = self.darkness_system.get_state()
-        
-        # Base multiplier on darkness state directly
-        state_multipliers = {
-            DarknessState.LIGHT: 1.0,
-            DarknessState.TWILIGHT: 1.2,
-            DarknessState.SHADOW: 1.4,
-            DarknessState.VOID: 1.6
-        }
-        
-        wave_modifier = max(0.5, min(1.5, abs(evaluation) / 1000))
-        multiplier = state_multipliers[darkness_state]
-        
-        count = max(1, int(self.base_darkling_count * multiplier * wave_modifier))
-        
-        return DarklingWave(
-            count=count,
-            health=100 + count * 10,
-            speed=100 + count * 5,
-            damage=10 + count * 2
-        )
-
     def _get_position_evaluation(self) -> float:
         """Evaluate the current board position."""
         try:

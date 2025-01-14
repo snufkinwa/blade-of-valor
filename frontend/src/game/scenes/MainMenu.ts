@@ -29,7 +29,7 @@ export class MainMenu extends Scene {
     this.logo = this.add.image(513, 354, "logoimg");
     //this.seperator = this.add.image(centerX, 480, "seperator").setScale(1.0);
     this.seperator = this.add
-      .image(centerX, 645, "seperator")
+      .image(centerX, 600, "seperator")
       .setScale(1.0)
       .setFlipY(true);
     if (!this.sound.get("mainTheme")) {
@@ -49,7 +49,7 @@ export class MainMenu extends Scene {
       .setScale(1.1);
 
     // Menu options
-    const options = ["New Game", "Quick Game", "Tutorial"];
+    const options = ["New Game", "Tutorial"];
     this.menuOptions = options.map((option, index) => {
       return this.add
         .text(centerX, 520 + index * 40, option, {
@@ -128,36 +128,41 @@ export class MainMenu extends Scene {
       this.confirmSound.play();
     }
     switch (this.currentSelection) {
-      case 0: // New Game
-        this.cameras.main.fadeOut(500, 0, 0, 0);
-        this.cameras.main.once("camerafadeoutcomplete", () => {
-          this.cleanupAudio();
-          this.scene.start("Intro", {
-            isNewGame: true,
-            onIntroComplete: () => {
-              this.scene.start("IntroScene");
-            },
-          });
-        });
-        break;
-      case 1: // Continue
+      // case 0: // New Game
+      //   this.cameras.main.fadeOut(500, 0, 0, 0);
+      //   this.cameras.main.once("camerafadeoutcomplete", () => {
+      //     this.cleanupAudio();
+      //     this.scene.start("Intro", {
+      //       isNewGame: true,
+      //       onIntroComplete: () => {
+      //         this.scene.start("IntroScene");
+      //       },
+      //     });
+      //   });
+      //   break;
+      case 0:
         this.cameras.main.fadeOut(500, 0, 0, 0);
         this.cameras.main.once("camerafadeoutcomplete", () => {
           this.cleanupAudio();
           this.scene.start("Corruption");
         });
         break;
-      case 2: // Tutorial
+      case 1: // Tutorial
         if (this.music) {
           this.music.pause();
         }
-        this.scene.pause();
+        EventBus.off("arrow-up-pressed", () => this.changeSelection(-1));
+        EventBus.off("arrow-down-pressed", () => this.changeSelection(1));
+        EventBus.off("enter-key-pressed", this.handleEnterKey, this);
         this.scene.launch("Tutorial", {
           parentScene: this,
           onClose: () => {
             if (this.music) {
               this.music.resume();
-              this.scene.resume();
+              this.scene.resume("Main Menu");
+              EventBus.on("arrow-up-pressed", () => this.changeSelection(-1));
+              EventBus.on("arrow-down-pressed", () => this.changeSelection(1));
+              EventBus.on("enter-key-pressed", this.handleEnterKey, this);
             }
           },
         });
